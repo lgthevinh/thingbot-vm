@@ -15,9 +15,10 @@ void app_main(void) {
         MUL,      // x * 5
         STORE, 0, // pop the value of stack into local[0]
         JMP, 4,   // jump to prog[4]
-        HLT};
+        HLT,
+    };
 
-    VM vm;
+    vm_t vm;
     vm_init(&vm, prog);
     vm_run(&vm);
 }
