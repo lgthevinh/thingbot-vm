@@ -1,9 +1,7 @@
-#ifndef OPCODE_H
-#define OPCODE_H
+#pragma once
 
 // Stack-base vm opcode
-typedef enum
-{
+typedef enum {
     HLT,
     PSH,
     ADD,
@@ -19,9 +17,9 @@ typedef enum
     LTE,
     EQ,
     NEQ,
-    
-    INVOKE,
-    IRETURN,
-} OpCode;
+    CALL,
+    RET,
 
-#endif // OPCODE_H
+    // len on vm opcode
+    OP_COUNT,
+} OpCode;

@@ -1,6 +1,6 @@
 # Opcode Specification
 
-Stack-based VM. Opcodes are defined in `main/thingbot_vm/opcode.h` and executed in `main/thingbot_vm/vm.c`. Error codes are defined in `main/thingbot_vm/error.h`.
+Stack-based VM. Opcodes are defined in `main/thingbot_vm/opcode.h` and dispatched in `main/thingbot_vm/vm.c` to the handlers in `main/thingbot_vm/handler.c`. Error codes are defined in `main/thingbot_vm/error.h`.
 
 ## Table of Contents
 
@@ -18,8 +18,8 @@ Stack-based VM. Opcodes are defined in `main/thingbot_vm/opcode.h` and executed 
   - [LOAD](#load), [STORE](#store)
 - [Branching](#branching)
   - [JMP](#jmp), [JNZ](#jnz)
-- [Calls (reserved)](#calls-reserved)
-  - [INVOKE](#invoke), [IRETURN](#ireturn)
+- [Calls](#calls)
+  - [CALL](#call), [RET](#ret)
 - [Errors](#errors)
   - [Error codes](#error-codes)
   - [Current behavior](#current-behavior)
@@ -31,6 +31,7 @@ Stack-based VM. Opcodes are defined in `main/thingbot_vm/opcode.h` and executed 
 - For binary operators, `a` is the value pushed first and `b` is the value pushed last (top of stack).
 - Comparison results are `1` (true) or `0` (false).
 - `VM_LOCALS` is the number of local slots; valid local indices are `0 .. VM_LOCALS - 1`.
+- `VM_CALL_DEPTH` is the maximum number of nested calls.
 
 ## Opcode Summary
 
@@ -51,8 +52,8 @@ Stack-based VM. Opcodes are defined in `main/thingbot_vm/opcode.h` and executed 
 | 12    | `LTE`     | Comparison | -              | `( a b -- a<=b )`   | Implemented |
 | 13    | `EQ`      | Comparison | -              | `( a b -- a==b )`   | Implemented |
 | 14    | `NEQ`     | Comparison | -              | `( a b -- a!=b )`   | Implemented |
-| 15    | `INVOKE`  | Calls      | -              | -                   | Reserved    |
-| 16    | `IRETURN` | Calls      | -              | -                   | Reserved    |
+| 15    | `CALL`    | Calls      | `target_ip`    | `( -- )`            | Implemented |
+| 16    | `RET`     | Calls      | -              | `( -- )`            | Implemented |
 
 ## Control
 
@@ -152,17 +153,27 @@ Conditional jump. The condition is always popped, so loops do not grow the stack
 - Stack effect: `( cond -- )`
 - Sets `ip = target_ip` if `cond != 0`; otherwise continues with the next instruction.
 
-## Calls (reserved)
+## Calls
 
-Declared in `opcode.h` but not handled by `vm_exec` yet; executing them currently falls into the bad-opcode error.
+Return addresses are kept on a separate call stack, up to `VM_CALL_DEPTH` deep. The operand stack and locals are shared between caller and callee: values pushed before `CALL` are visible to the callee, values left on the stack before `RET` are visible to the caller, and a callee writing `local[idx]` overwrites the caller's value.
 
-### INVOKE
+### CALL
 
-Reserved for function calls. Semantics not defined yet.
+Calls a subroutine.
 
-### IRETURN
+- Operand: `target_ip`
+- Stack effect: `( -- )`
+- Pushes the address of the next instruction onto the call stack, then sets `ip = target_ip`.
+- Error: calling when the call stack already holds `VM_CALL_DEPTH` entries halts the VM.
 
-Reserved for returning from a call. Semantics not defined yet.
+### RET
+
+Returns from a subroutine.
+
+- Operand: none
+- Stack effect: `( -- )`
+- Pops the return address from the call stack into `ip`.
+- Error: `RET` with an empty call stack halts the VM.
 
 ## Errors
 
@@ -180,11 +191,13 @@ Defined by the `Error` enum in `error.h`.
 
 ### Current behavior
 
-`vm.c` does not return `Error` codes yet. On the conditions below it logs an error and halts (`running = false`):
+The VM does not return `Error` codes yet. On the conditions below it logs an error and halts (`running = false`):
 
-| Condition       | Trigger                                                  |
-|-----------------|----------------------------------------------------------|
-| Bad opcode      | Opcode value with no handler (incl. reserved opcodes)    |
-| Bad local index | `LOAD` / `STORE` with `idx` outside `0 .. VM_LOCALS - 1` |
+| Condition            | Trigger                                                  |
+|----------------------|----------------------------------------------------------|
+| Bad opcode           | Opcode value outside the enum, or with no handler        |
+| Bad local index      | `LOAD` / `STORE` with `idx` outside `0 .. VM_LOCALS - 1` |
+| Call stack overflow  | `CALL` with `VM_CALL_DEPTH` calls already active         |
+| Call stack underflow | `RET` with no active call                                |
 
-Stack overflow/underflow and out-of-range jump targets are **not** checked, so `STACK_OVERFLOW` is never raised.
+Operand stack overflow/underflow and out-of-range jump/call targets are **not** checked, so `STACK_OVERFLOW` is never raised.
