@@ -18,7 +18,10 @@ typedef enum
     LT,
     LTE,
     EQ,
-    NEQ
+    NEQ,
+    
+    INVOKE,
+    IRETURN,
 } OpCode;
 
 #endif // OPCODE_H

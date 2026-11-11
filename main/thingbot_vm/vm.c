@@ -200,7 +200,7 @@ static void vm_exec(VM *vm, int opcode)
         ESP_LOGD(TAG, "eq %d == %d = %d, ip %d, sp %d", a, b, a == b, vm->ip - 1, vm->sp);
         break;
     }
-    
+
     case NEQ:
     {
         int b = vm->stack[vm->sp--];
