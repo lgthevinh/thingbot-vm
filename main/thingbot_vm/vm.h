@@ -4,7 +4,7 @@
 
 #define VM_LOCALS 16
 #define VM_STACK_LEN 256
-#define VM_CALL_DEPTH 256
+#define VM_CALL_DEPTH 8
 
 // Simple stack-based VM on ThingBot (ESP32C3)
 typedef struct {

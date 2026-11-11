@@ -6,6 +6,7 @@
 #define I2C_SDA_GPIO GPIO_NUM_8
 
 static thingbot_t bot;
+static vm_t vm;
 
 void app_main(void) {
     // clang-format off
@@ -43,7 +44,6 @@ void app_main(void) {
     io_set_i2c(&bot.io, i2c_bus);
     ESP_ERROR_CHECK(act_init(&bot.act, bot.io.i2c_bus));
 
-    vm_t vm;
     vm_init(&vm, &bot);
     vm_run(&vm, prog);
 }
