@@ -7,8 +7,7 @@
 #define VM_CALL_DEPTH 256
 
 // Simple stack-based VM on ThingBot (ESP32C3)
-typedef struct
-{
+typedef struct {
     const int *prog;
     int ip;
     int sp;
@@ -19,10 +18,12 @@ typedef struct
 
     int local[VM_LOCALS];
     bool running;
+
+    void *ctx; // board context, passed to vm_init
 } vm_t;
 
-void vm_init(vm_t *vm, const int *prog);
-void vm_run(vm_t *vm);
+void vm_init(vm_t *vm, void *ctx);
+void vm_run(vm_t *vm, const int *prog);
 
 static inline int vm_fetch(vm_t *vm) {
     return vm->prog[vm->ip++];
