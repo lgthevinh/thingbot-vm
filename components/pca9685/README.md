@@ -1,4 +1,4 @@
-# PCA9685 Driver
+# PCA9685 Driver (From TNY-Robotics/pca9685-esp-idf)
 
 Source code for the PCA9685 I2C PWM driver for ESP-IDF.
 
