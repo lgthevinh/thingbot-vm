@@ -2,24 +2,24 @@
 
 #include <stdbool.h>
 
-#define VM_LOCALS 16
-#define VM_STACK_LEN 256
-#define VM_CALL_DEPTH 8
+#define VM_LOCALS 16     // local slots
+#define VM_STACK_LEN 256 // operand stack slots
+#define VM_CALL_DEPTH 8  // maximum nested calls
 
 // Simple stack-based VM on ThingBot (ESP32C3)
 typedef struct {
-    const int *prog;
-    int ip;
-    int sp;
-    int stack[VM_STACK_LEN];
+    const int *prog;               // program being run
+    int ip;                        // index of the next slot to fetch
+    int sp;                        // index of the operand stack top, -1 when empty
+    int stack[VM_STACK_LEN];       // operand stack, grows upward
 
-    int call_sp;
-    int call_stack[VM_CALL_DEPTH];
+    int call_sp;                   // index of the call stack top, -1 when empty
+    int call_stack[VM_CALL_DEPTH]; // return addresses
 
-    int local[VM_LOCALS];
-    bool running;
+    int local[VM_LOCALS];          // shared by the whole program, kept between runs
+    bool running;                  // the run loop continues while true
 
-    void *ctx; // board context, passed to vm_init
+    void *ctx;                     // board context, passed to vm_init, never read by the VM core
 } vm_t;
 
 void vm_init(vm_t *vm, void *ctx);

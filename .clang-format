@@ -5,3 +5,6 @@ ColumnLimit: 0
 InsertBraces: true
 AllowShortFunctionsOnASingleLine: None
 AllowShortBlocksOnASingleLine: Never
+AlignTrailingComments:
+  Kind: Always
+  OverEmptyLines: 1
