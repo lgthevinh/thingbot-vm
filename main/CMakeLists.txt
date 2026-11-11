@@ -1,2 +1,2 @@
-idf_component_register(SRC_DIRS "." "thingbot_vm" "thingbot_handler"
-                    INCLUDE_DIRS "." "thingbot_vm" "thingbot_handler")
+idf_component_register(SRC_DIRS "." "vm" "board"
+                    INCLUDE_DIRS "." "vm" "board")

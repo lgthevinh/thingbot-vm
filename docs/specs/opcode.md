@@ -1,6 +1,6 @@
 # Opcode Specification
 
-Stack-based VM. Opcodes are defined in `main/thingbot_vm/opcode.h` and dispatched in `main/thingbot_vm/vm.c` to the handlers in `main/thingbot_vm/handler.c`. Error codes are defined in `main/thingbot_vm/error.h`.
+Stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `main/vm/vm.c` to the handlers in `main/vm/handler.c`. Error codes are defined in `main/vm/error.h`.
 
 ## Table of Contents
 

@@ -1,6 +1,6 @@
 # Virtual machine Specifications
 
-Stack-based VM running on ThingBot (ESP32-C3). The core lives in `main/thingbot_vm/` and has no hardware dependencies; board-specific code lives in `main/thingbot_handler/` and reaches the VM through a context pointer. Opcode semantics are specified in [opcode.md](opcode.md).
+Stack-based VM running on ThingBot (ESP32-C3). The core lives in `main/vm/` and has no hardware dependencies; board-specific code lives in `main/board/` and reaches the VM through a context pointer. Opcode semantics are specified in [opcode.md](opcode.md).
 
 ## Table of Contents
 
@@ -19,17 +19,17 @@ Stack-based VM running on ThingBot (ESP32-C3). The core lives in `main/thingbot_
 
 ## Architecture
 
-| Module                      | Role                                                                 |
-|-----------------------------|----------------------------------------------------------------------|
-| `thingbot_vm/vm.h`, `vm.c`   | VM state, `vm_init`, `vm_run`, fetch/push/pop helpers, dispatch      |
-| `thingbot_vm/opcode.h`       | `OpCode` enum, `OP_COUNT`                                            |
-| `thingbot_vm/handler.h/.c`   | One handler per opcode and the `op_handlers` dispatch table          |
-| `thingbot_vm/error.h`        | `Error` enum (not used yet)                                          |
-| `thingbot_handler/thingbot.h`| `thingbot_t` board context                                           |
-| `thingbot_handler/io.h/.c`   | I2C bus, SPI host and GPIO pin masks                                 |
-| `thingbot_handler/act.h/.c`  | Actuators on the PCA9685                                             |
+| Module                 | Role                                                            |
+|------------------------|-----------------------------------------------------------------|
+| `vm/vm.h`, `vm.c`      | VM state, `vm_init`, `vm_run`, fetch/push/pop helpers, dispatch |
+| `vm/opcode.h`          | `OpCode` enum, `OP_COUNT`                                       |
+| `vm/handler.h/.c`      | One handler per opcode and the `op_handlers` dispatch table     |
+| `vm/error.h`           | `Error` enum (not used yet)                                     |
+| `board/thingbot.h`     | `thingbot_t` board context                                      |
+| `board/io.h/.c`        | I2C bus, SPI host and GPIO pin masks                            |
+| `board/act.h/.c`       | Actuators on the PCA9685                                        |
 
-`thingbot_vm` includes no ESP-IDF driver headers, so it compiles as plain C. Only `vm.c` and `handler.c` use `esp_log.h` for logging.
+`vm` includes no ESP-IDF driver headers, so it compiles as plain C. Only `vm.c` and `handler.c` use `esp_log.h` for logging.
 
 ## Lifecycle
 
