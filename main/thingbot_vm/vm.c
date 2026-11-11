@@ -7,15 +7,16 @@ static const char *TAG = "vm";
 static void vm_exec(vm_t *vm, int opcode);
 
 void vm_init(vm_t *vm, void *ctx) {
-    vm->ip = 0;  // instruction_pointer
-    vm->sp = -1; // stack_pointer
-    vm->call_sp = -1;
-    vm->running = true;
     vm->ctx = ctx;
 }
 
 void vm_run(vm_t *vm, const int *prog) {
     vm->prog = prog;
+    vm->ip = 0;  // instruction_pointer
+    vm->sp = -1; // stack_pointer
+    vm->call_sp = -1;
+    vm->running = true;
+
     while (vm->running) {
         int op_code = vm_fetch(vm);
         vm_exec(vm, op_code);
