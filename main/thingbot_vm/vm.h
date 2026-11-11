@@ -3,7 +3,7 @@
 #include <stdbool.h>
 
 #define VM_LOCALS 16
-#define VN_STACK_LEN 256
+#define VM_STACK_LEN 256
 #define VM_CALL_DEPTH 256
 
 // Simple stack-based VM on ThingBot (ESP32C3)
@@ -12,7 +12,7 @@ typedef struct
     const int *prog;
     int ip;
     int sp;
-    int stack[VN_STACK_LEN];
+    int stack[VM_STACK_LEN];
 
     int call_sp;
     int call_stack[VM_CALL_DEPTH];
