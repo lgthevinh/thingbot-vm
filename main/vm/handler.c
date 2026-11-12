@@ -1,5 +1,7 @@
 #include "handler.h"
 #include "esp_log.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "thingbot.h"
 
 static const char *TAG = "vm";
@@ -176,6 +178,17 @@ static void op_ret(vm_t *vm) {
     vm->ip = vm_callstack_pop(vm);
 }
 
+static void op_wait(vm_t *vm) {
+    int ms = vm_pop(vm);
+    if (ms < 0) {
+        ms = 0;
+    }
+
+    // block the task instead of spinning so the idle task and watchdog keep running
+    ESP_LOGD(TAG, "wait %d ms, ip %d, sp %d", ms, vm->ip - 1, vm->sp);
+    vTaskDelay(pdMS_TO_TICKS(ms));
+}
+
 static void op_motor(vm_t *vm) {
     thingbot_t *bot = vm->ctx;
     int speed = vm_pop(vm);
@@ -248,6 +261,7 @@ const OpHandler op_handlers[OP_COUNT] = {
     [NEQ] = op_neq,
     [CALL] = op_call,
     [RET] = op_ret,
+    [WAIT] = op_wait,
     [MOTOR] = op_motor,
     [SERVO] = op_servo,
     [SPIN] = op_spin,

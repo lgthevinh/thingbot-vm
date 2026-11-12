@@ -19,6 +19,7 @@ typedef enum {
     NEQ,
     CALL,
     RET,
+    WAIT,
 
     // thingbot specific opcode
     MOTOR,

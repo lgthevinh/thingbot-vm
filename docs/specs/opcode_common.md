@@ -20,6 +20,8 @@ Stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `mai
   - [JMP](#jmp), [JNZ](#jnz)
 - [Calls](#calls)
   - [CALL](#call), [RET](#ret)
+- [Timing](#timing)
+  - [WAIT](#wait)
 - [Errors](#errors)
   - [Error codes](#error-codes)
   - [Current behavior](#current-behavior)
@@ -54,6 +56,7 @@ Stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `mai
 | 14    | `NEQ`     | Comparison | -              | `( a b -- a!=b )`   | Implemented |
 | 15    | `CALL`    | Calls      | `target_ip`    | `( -- )`            | Implemented |
 | 16    | `RET`     | Calls      | -              | `( -- )`            | Implemented |
+| 17    | `WAIT`    | Timing     | -              | `( ms -- )`         | Implemented |
 
 ## Control
 
@@ -174,6 +177,18 @@ Returns from a subroutine.
 - Stack effect: `( -- )`
 - Pops the return address from the call stack into `ip`.
 - Error: `RET` with an empty call stack halts the VM.
+
+## Timing
+
+### WAIT
+
+Pauses the program.
+
+- Operand: none
+- Stack effect: `( ms -- )`
+- Blocks the VM task with `vTaskDelay`, so other tasks and the idle task keep running.
+- Resolution is one FreeRTOS tick (10 ms at `CONFIG_FREERTOS_HZ=100`); `ms` is rounded down to whole ticks.
+- Negative `ms` is treated as `0`.
 
 ## Errors
 

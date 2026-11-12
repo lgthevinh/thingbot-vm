@@ -25,11 +25,11 @@ PSH, 1, PSH, 80, MOTOR,   // motor M1 at speed 80
 
 | Value | Mnemonic | Operand | Stack effect           | Range       | Calls                 | Status      |
 |------:|----------|---------|------------------------|-------------|-----------------------|-------------|
-| 17    | `MOTOR`  | -       | `( id speed -- )`      | -100 .. 100 | `act_set_motor_speed` | Implemented |
-| 18    | `SERVO`  | -       | `( id angle -- )`      | 0 .. 180    | `act_set_servo_angle` | Implemented |
-| 19    | `SPIN`   | -       | `( id speed -- )`      | -100 .. 100 | `act_set_servo_speed` | Implemented |
-| 20    | `BUZZ`   | -       | `( duty -- )`          | 0 .. 100    | `act_set_buzzer`      | Implemented |
-| 21    | `LED`    | -       | `( id brightness -- )` | 0 .. 100    | `act_set_led`         | Implemented |
+| 18    | `MOTOR`  | -       | `( id speed -- )`      | -100 .. 100 | `act_set_motor_speed` | Implemented |
+| 19    | `SERVO`  | -       | `( id angle -- )`      | 0 .. 180    | `act_set_servo_angle` | Implemented |
+| 20    | `SPIN`   | -       | `( id speed -- )`      | -100 .. 100 | `act_set_servo_speed` | Implemented |
+| 21    | `BUZZ`   | -       | `( duty -- )`          | 0 .. 100    | `act_set_buzzer`      | Implemented |
+| 22    | `LED`    | -       | `( id brightness -- )` | 0 .. 100    | `act_set_led`         | Implemented |
 
 Values outside the range are clamped, not rejected.
 

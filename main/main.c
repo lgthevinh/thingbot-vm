@@ -10,19 +10,31 @@ static vm_t vm;
 
 void app_main(void) {
     // clang-format off
+    // beep and blink LED 1 three times
     const int prog[] = {
-        PSH, 10,   // x = 10
-        STORE, 0,  // local[0] = x
-        LOAD, 0,   // copy x from local[0] to stack
-        PSH, 1000,
-        GT,        // compare a (x) with b (1000)
-        JNZ, 20,   // if not zero, jump to halt
-        LOAD, 0,   // GT consume x, so get x again
-        PSH, 5,
-        MUL,       // x * 5
-        STORE, 0,  // pop the value of stack into local[0]
-        JMP, 4,    // jump to prog[4]
-        HLT,
+        PSH, 3,    // 0:  count = 3
+        STORE, 0,  // 2:  local[0] = count
+        PSH, 1,    // 4:  loop: LED 1 on
+        PSH, 100,
+        LED,
+        PSH, 50,   // 9:  buzzer on, 50% duty
+        BUZZ,
+        PSH, 200,  // 12: wait 200 ms
+        WAIT,
+        PSH, 1,    // 15: LED 1 off
+        PSH, 0,
+        LED,
+        PSH, 0,    // 20: buzzer off, outputs hold their last value after HLT
+        BUZZ,
+        PSH, 200,  // 23: wait 200 ms
+        WAIT,
+        LOAD, 0,   // 26: count - 1
+        PSH, 1,
+        SUB,
+        STORE, 0,
+        LOAD, 0,   // 33: loop while count != 0
+        JNZ, 4,
+        HLT,       // 37
     };
     // clang-format on
 
