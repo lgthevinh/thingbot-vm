@@ -2,7 +2,7 @@
 
 #include <stdbool.h>
 
-#define VM_LOCALS 16     // local slots
+#define VM_LOCAL_SLOT 16 // local slots
 #define VM_STACK_LEN 256 // operand stack slots
 #define VM_CALL_DEPTH 8  // maximum nested calls
 
@@ -16,7 +16,7 @@ typedef struct {
     int call_sp;                   // index of the call stack top, -1 when empty
     int call_stack[VM_CALL_DEPTH]; // return addresses
 
-    int local[VM_LOCALS];          // shared by the whole program, kept between runs
+    int local[VM_LOCAL_SLOT];      // shared by the whole program, kept between runs
     bool running;                  // the run loop continues while true
 
     void *ctx;                     // board context, passed to vm_init, never read by the VM core

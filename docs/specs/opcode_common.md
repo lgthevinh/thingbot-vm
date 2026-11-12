@@ -32,7 +32,7 @@ Stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `mai
 - Stack effect notation: `( before -- after )`, top of stack on the right.
 - For binary operators, `a` is the value pushed first and `b` is the value pushed last (top of stack).
 - Comparison results are `1` (true) or `0` (false).
-- `VM_LOCALS` is the number of local slots; valid local indices are `0 .. VM_LOCALS - 1`.
+- `VM_LOCAL_SLOT` is the number of local slots; valid local indices are `0 .. VM_LOCAL_SLOT - 1`.
 - `VM_CALL_DEPTH` is the maximum number of nested calls.
 
 ## Opcode Summary
@@ -211,7 +211,7 @@ The VM does not return `Error` codes yet. On the conditions below it logs an err
 | Condition            | Trigger                                                  |
 |----------------------|----------------------------------------------------------|
 | Bad opcode           | Opcode value outside the enum, or with no handler        |
-| Bad local index      | `LOAD` / `STORE` with `idx` outside `0 .. VM_LOCALS - 1` |
+| Bad local index      | `LOAD` / `STORE` with `idx` outside `0 .. VM_LOCAL_SLOT - 1` |
 | Call stack overflow  | `CALL` with `VM_CALL_DEPTH` calls already active         |
 | Call stack underflow | `RET` with no active call                                |
 

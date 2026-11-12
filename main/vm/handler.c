@@ -7,7 +7,7 @@
 static const char *TAG = "vm";
 
 static bool vm_check_local(vm_t *vm, int idx) {
-    if (idx >= 0 && idx < VM_LOCALS) {
+    if (idx >= 0 && idx < VM_LOCAL_SLOT) {
         return true;
     }
 

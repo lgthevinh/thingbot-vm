@@ -36,7 +36,7 @@ typedef struct {
     int stack[VM_STACK_LEN];       // operand stack
     int call_sp;                   // index of the call stack top, -1 when empty
     int call_stack[VM_CALL_DEPTH]; // return addresses
-    int local[VM_LOCALS];          // local slots
+    int local[VM_LOCAL_SLOT];      // local slots
     bool running;                  // run loop continues while true
     void *ctx;                     // board context
 } vm_t;
@@ -45,7 +45,7 @@ typedef struct {
 | Constant        | Value | Meaning                |
 |-----------------|------:|------------------------|
 | `VM_STACK_LEN`  | 256   | Operand stack slots    |
-| `VM_LOCALS`     | 16    | Local slots            |
+| `VM_LOCAL_SLOT` | 16    | Local slots            |
 | `VM_CALL_DEPTH` | 8     | Maximum nested calls   |
 
 ### Word
