@@ -5,6 +5,13 @@ Stack-based VM running on ThingBot (ESP32-C3). The core (`vm.c`) has no hardware
 ## Table of Contents
 
 - [Architecture](#architecture)
+  - [Word](#word)
+  - [Program](#program)
+  - [Registers](#registers)
+  - [Operand stack](#operand-stack)
+  - [Locals](#locals)
+  - [Call stack](#call-stack)
+- [Source layout](#source-layout)
 - [Lifecycle](#lifecycle)
   - [vm_init](#vm_init)
   - [vm_run](#vm_run)
@@ -18,6 +25,72 @@ Stack-based VM running on ThingBot (ESP32-C3). The core (`vm.c`) has no hardware
 - [Limitations](#limitations)
 
 ## Architecture
+
+All VM state lives in one `vm_t` (`vm/vm.h`):
+
+```c
+typedef struct {
+    const int *prog;               // program being run
+    int ip;                        // index of the next slot to fetch
+    int sp;                        // index of the operand stack top, -1 when empty
+    int stack[VM_STACK_LEN];       // operand stack
+    int call_sp;                   // index of the call stack top, -1 when empty
+    int call_stack[VM_CALL_DEPTH]; // return addresses
+    int local[VM_LOCALS];          // local slots
+    bool running;                  // run loop continues while true
+    void *ctx;                     // board context
+} vm_t;
+```
+
+| Constant        | Value | Meaning                |
+|-----------------|------:|------------------------|
+| `VM_STACK_LEN`  | 256   | Operand stack slots    |
+| `VM_LOCALS`     | 16    | Local slots            |
+| `VM_CALL_DEPTH` | 8     | Maximum nested calls   |
+
+### Word
+
+The only data type is the C `int`, which is 32-bit signed on the ESP32-C3. Program slots, stack entries, locals and return addresses are all `int`. Comparisons produce `1` or `0`, and `JNZ` treats any non-zero value as true.
+
+### Program
+
+A program is a `const int` array, addressed by slot index. Each opcode takes one slot, and its operand, if it has one, takes the next slot. There is no header and no length, so a program ends where its `HLT` is executed. Jump and call targets are slot indices.
+
+```c
+const int prog[] = {
+    PSH, 2,   // slot 0-1
+    PSH, 3,   // slot 2-3
+    ADD,      // slot 4
+    HLT,      // slot 5
+};
+```
+
+### Registers
+
+| Register  | Holds                                                      |
+|-----------|------------------------------------------------------------|
+| `ip`      | Index of the next slot to fetch                            |
+| `sp`      | Index of the operand stack top, `-1` when empty            |
+| `call_sp` | Index of the call stack top, `-1` when empty               |
+| `running` | Run loop continues while `true`, cleared by `HLT` or error |
+| `ctx`     | Board context, never read by the core (see [Board context](#board-context)) |
+
+### Operand stack
+
+`stack` holds the values that opcodes work on. It grows upward: a push writes `stack[++sp]` and a pop reads `stack[sp--]`. Arithmetic, comparison and board opcodes pop their inputs and push their result. Bounds are not checked (see [Limitations](#limitations)).
+
+### Locals
+
+`local` is a single flat array of 16 slots, accessed by index with `LOAD` and `STORE`. The index is bounds-checked.
+
+- **Global to the program:** there are no per-call frames, so a callee writing `local[idx]` overwrites the caller's value.
+- **Kept between runs:** `vm_run` does not reset `local`. Since `vm` is static, it is all zeros at boot.
+
+### Call stack
+
+`call_stack` holds return addresses only: no arguments, locals or saved `sp`. `CALL` pushes the index of the slot after its operand and jumps; `RET` pops it back into `ip`. Overflow and underflow are checked. Arguments and return values pass through the operand stack.
+
+## Source layout
 
 | Module                 | Role                                                            |
 |------------------------|-----------------------------------------------------------------|
@@ -79,7 +152,7 @@ Before calling a handler, `vm_exec` checks that:
 - `0 <= opcode < OP_COUNT`
 - `op_handlers[opcode]` is not `NULL`
 
-Otherwise it logs `bad opcode` and halts. Opcodes declared in `opcode.h` without a table entry (the ThingBot opcodes `SET_BUZ` .. `GET_SW` today) fail this check.
+Otherwise it logs `bad opcode` and halts. An opcode declared in `opcode.h` without a table entry fails this check.
 
 Adding an opcode:
 
@@ -135,7 +208,7 @@ Stack overflow checking is off (`CONFIG_STACK_CHECK_NONE`). To measure at runtim
 
 ### VM footprint
 
-`vm_t` is about 1.1 KB on the ESP32-C3:
+`vm_t` (see [Architecture](#architecture)) is about 1.1 KB on the ESP32-C3:
 
 | Part         | Size       |
 |--------------|-----------:|
@@ -144,7 +217,7 @@ Stack overflow checking is off (`CONFIG_STACK_CHECK_NONE`). To measure at runtim
 | `call_stack` | 32 B       |
 | Other fields | ~24 B      |
 
-The `app_main` task stack is 3584 B (`CONFIG_ESP_MAIN_TASK_STACK_SIZE`), so `vm_t` and `thingbot_t` are declared `static` in `main.c`. As statics, `local` starts as all zeros at boot.
+The `app_main` task stack is 3584 B (`CONFIG_ESP_MAIN_TASK_STACK_SIZE`), so `vm_t` and `thingbot_t` are declared `static` in `main.c`.
 
 ## Errors and halting
 
@@ -169,6 +242,5 @@ These are not checked and lead to undefined behaviour:
 
 Other behaviour to be aware of:
 
-- **Locals persist between runs:** `vm_run` does not reset `local`.
-- **Locals are shared with calls:** a callee writing `local[idx]` overwrites the caller's value.
 - **Integer overflow:** arithmetic is plain C `int` with no overflow handling.
+- **Locals:** shared with calls and kept between runs (see [Locals](#locals)).
