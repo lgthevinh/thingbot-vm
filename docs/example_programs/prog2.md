@@ -2,7 +2,18 @@
 
 Beeps the buzzer and blinks LED 1 three times, 200 ms on and 200 ms off.
 
-Opcodes: `PSH`, `LOAD`, `STORE`, `SUB`, `JNZ`, `LED`, `BUZZ`, `WAIT`, `HLT`.
+## Pseudo code
+
+```python
+repeat 3 times:
+    led(1, 100)
+    buzz(50)
+    wait(200)
+    led(1, 0)
+    buzz(0)
+    wait(200)
+halt
+```
 
 ## Program
 

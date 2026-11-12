@@ -2,7 +2,30 @@
 
 Drives forward for 1 s on motors M1 and M2, stops, sweeps servo 1 from 0° to 180° in 30° steps, centers it at 90°, then beeps once.
 
-Opcodes: `PSH`, `LOAD`, `STORE`, `ADD`, `LTE`, `JNZ`, `CALL`, `RET`, `MOTOR`, `SERVO`, `BUZZ`, `WAIT`, `HLT`.
+## Pseudo code
+
+```python
+motor(1, 60)
+motor(2, 60)
+wait(1000)
+stop()
+
+angle = 0
+while angle <= 180:
+    servo(1, angle)
+    wait(300)
+    angle = angle + 30
+
+servo(1, 90)
+buzz(50)
+wait(100)
+buzz(0)
+halt
+
+def stop():
+    motor(1, 0)
+    motor(2, 0)
+```
 
 ## Program
 

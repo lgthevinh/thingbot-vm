@@ -2,7 +2,14 @@
 
 Starts with `x = 10` and multiplies it by 5 until it is greater than 1000. No hardware is used, so it runs on the VM alone.
 
-Opcodes: `PSH`, `LOAD`, `STORE`, `MUL`, `GT`, `JNZ`, `JMP`, `HLT`.
+## Pseudo code
+
+```python
+x = 10
+while x <= 1000:
+    x = x * 5
+halt
+```
 
 ## Program
 
