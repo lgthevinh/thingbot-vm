@@ -208,11 +208,11 @@ Defined by the `Error` enum in `error.h`.
 
 The VM does not return `Error` codes yet. On the conditions below it logs an error and halts (`running = false`):
 
-| Condition            | Trigger                                                  |
-|----------------------|----------------------------------------------------------|
-| Bad opcode           | Opcode value outside the enum, or with no handler        |
+| Condition            | Trigger                                                      |
+|----------------------|--------------------------------------------------------------|
+| Bad opcode           | Opcode value outside the enum, or with no handler            |
 | Bad local index      | `LOAD` / `STORE` with `idx` outside `0 .. VM_LOCAL_SLOT - 1` |
-| Call stack overflow  | `CALL` with `VM_CALL_DEPTH` calls already active         |
-| Call stack underflow | `RET` with no active call                                |
+| Call stack overflow  | `CALL` with `VM_CALL_DEPTH` calls already active             |
+| Call stack underflow | `RET` with no active call                                    |
 
 Operand stack overflow/underflow and out-of-range jump/call targets are **not** checked, so `STACK_OVERFLOW` is never raised.
