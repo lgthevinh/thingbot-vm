@@ -10,10 +10,11 @@ A small stack-based virtual machine for ThingBot, running on an ESP32-C3 (WT32C3
 
 ## Docs
 
-| Doc                                 | Covers                                                           |
-|-------------------------------------|------------------------------------------------------------------|
-| [VM spec](docs/specs/vm.md)         | Architecture, lifecycle, dispatch, board context, memory, errors |
-| [Opcode spec](docs/specs/opcode.md) | Every opcode: operand, stack effect, behaviour, errors           |
+| Doc                                             | Covers                                                           |
+|-------------------------------------------------|------------------------------------------------------------------|
+| [VM spec](docs/specs/vm.md)                     | Architecture, lifecycle, dispatch, board context, memory, errors |
+| [Opcode spec](docs/specs/opcode_common.md)      | Core opcodes: operand, stack effect, behaviour, errors           |
+| [Board opcode spec](docs/specs/opcode_board.md) | ThingBot actuator opcodes, PCA9685 channel map                   |
 
 ## Build
 

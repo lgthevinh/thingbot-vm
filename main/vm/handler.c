@@ -1,5 +1,6 @@
 #include "handler.h"
 #include "esp_log.h"
+#include "thingbot.h"
 
 static const char *TAG = "vm";
 
@@ -9,6 +10,16 @@ static bool vm_check_local(vm_t *vm, int idx) {
     }
 
     ESP_LOGE(TAG, "bad local idx %d, ip %d", idx, vm->ip - 2);
+    vm->running = false;
+    return false;
+}
+
+static bool vm_check_act(vm_t *vm, esp_err_t err) {
+    if (err == ESP_OK) {
+        return true;
+    }
+
+    ESP_LOGE(TAG, "act failed: %s, ip %d", esp_err_to_name(err), vm->ip - 1);
     vm->running = false;
     return false;
 }
@@ -165,6 +176,60 @@ static void op_ret(vm_t *vm) {
     vm->ip = vm_callstack_pop(vm);
 }
 
+static void op_motor(vm_t *vm) {
+    thingbot_t *bot = vm->ctx;
+    int speed = vm_pop(vm);
+    int id = vm_pop(vm);
+    if (!vm_check_act(vm, act_set_motor_speed(&bot->act, id, speed))) {
+        return;
+    }
+
+    ESP_LOGD(TAG, "motor %d speed %d, ip %d, sp %d", id, speed, vm->ip - 1, vm->sp);
+}
+
+static void op_servo(vm_t *vm) {
+    thingbot_t *bot = vm->ctx;
+    int angle = vm_pop(vm);
+    int id = vm_pop(vm);
+    if (!vm_check_act(vm, act_set_servo_angle(&bot->act, id, angle))) {
+        return;
+    }
+
+    ESP_LOGD(TAG, "servo %d angle %d, ip %d, sp %d", id, angle, vm->ip - 1, vm->sp);
+}
+
+static void op_spin(vm_t *vm) {
+    thingbot_t *bot = vm->ctx;
+    int speed = vm_pop(vm);
+    int id = vm_pop(vm);
+    if (!vm_check_act(vm, act_set_servo_speed(&bot->act, id, speed))) {
+        return;
+    }
+
+    ESP_LOGD(TAG, "spin %d speed %d, ip %d, sp %d", id, speed, vm->ip - 1, vm->sp);
+}
+
+static void op_buzz(vm_t *vm) {
+    thingbot_t *bot = vm->ctx;
+    int duty = vm_pop(vm);
+    if (!vm_check_act(vm, act_set_buzzer(&bot->act, duty))) {
+        return;
+    }
+
+    ESP_LOGD(TAG, "buzz duty %d, ip %d, sp %d", duty, vm->ip - 1, vm->sp);
+}
+
+static void op_led(vm_t *vm) {
+    thingbot_t *bot = vm->ctx;
+    int brightness = vm_pop(vm);
+    int id = vm_pop(vm);
+    if (!vm_check_act(vm, act_set_led(&bot->act, id, brightness))) {
+        return;
+    }
+
+    ESP_LOGD(TAG, "led %d brightness %d, ip %d, sp %d", id, brightness, vm->ip - 1, vm->sp);
+}
+
 const OpHandler op_handlers[OP_COUNT] = {
     [HLT] = op_hlt,
     [PSH] = op_psh,
@@ -183,4 +248,9 @@ const OpHandler op_handlers[OP_COUNT] = {
     [NEQ] = op_neq,
     [CALL] = op_call,
     [RET] = op_ret,
+    [MOTOR] = op_motor,
+    [SERVO] = op_servo,
+    [SPIN] = op_spin,
+    [BUZZ] = op_buzz,
+    [LED] = op_led,
 };

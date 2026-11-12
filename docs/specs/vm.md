@@ -1,6 +1,6 @@
 # Virtual machine Specifications
 
-Stack-based VM running on ThingBot (ESP32-C3). The core lives in `main/vm/` and has no hardware dependencies; board-specific code lives in `main/board/` and reaches the VM through a context pointer. Opcode semantics are specified in [opcode.md](opcode.md).
+Stack-based VM running on ThingBot (ESP32-C3). The core (`vm.c`) has no hardware dependencies; board-specific code lives in `main/board/` and reaches the board opcode handlers through a context pointer. Opcode semantics are specified in [opcode_common.md](opcode_common.md).
 
 ## Table of Contents
 
@@ -29,7 +29,7 @@ Stack-based VM running on ThingBot (ESP32-C3). The core lives in `main/vm/` and 
 | `board/io.h/.c`        | I2C bus, SPI host and GPIO pin masks                            |
 | `board/act.h/.c`       | Actuators on the PCA9685                                        |
 
-`vm` includes no ESP-IDF driver headers, so it compiles as plain C. Only `vm.c` and `handler.c` use `esp_log.h` for logging.
+`vm.c` includes no ESP-IDF driver headers. `handler.c` includes `thingbot.h` for the board opcodes, so it depends on `board` and its drivers. Only `vm.c` and `handler.c` use `esp_log.h` for logging.
 
 ## Lifecycle
 
@@ -86,7 +86,7 @@ Adding an opcode:
 1. Add it to `OpCode` before `OP_COUNT`.
 2. Write `static void op_<name>(vm_t *vm)` in `handler.c`.
 3. Add `[<NAME>] = op_<name>` to `op_handlers`.
-4. Document it in [opcode.md](opcode.md).
+4. Document it in [opcode_common.md](opcode_common.md), or [opcode_board.md](opcode_board.md) for board opcodes.
 
 ## Board context
 
