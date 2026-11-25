@@ -178,8 +178,8 @@ static void op_wait(vm_t *vm) {
     vTaskDelay(pdMS_TO_TICKS(ms));
 }
 
-static void op_invoke(vm_t *vm) {
-    ESP_LOGE(TAG, "invoke not implemented, pc %d", vm->pc - 1);
+static void op_invoke_static(vm_t *vm) {
+    ESP_LOGE(TAG, "invoke static not implemented, pc %d", vm->pc - 1);
     vm->running = false;
 }
 
@@ -214,6 +214,6 @@ const OpHandler op_handlers[OP_COUNT] = {
     [CALL] = op_call,
     [RET] = op_ret,
     [WAIT] = op_wait,
-    [INVOKE] = op_invoke,
+    [INVOKE_STATIC] = op_invoke_static,
     [INVOKE_NATIVE] = op_invoke_native,
 };

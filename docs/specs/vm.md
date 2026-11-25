@@ -255,7 +255,7 @@ The VM stops when `running` becomes `false`. It halts normally on `HLT`, and on 
 | Bad local index      | `LOAD`, `STORE` |
 | Call stack overflow  | `CALL`          |
 | Call stack underflow | `RET`           |
-| Not implemented      | `INVOKE`        |
+| Not implemented      | `INVOKE_STATIC` |
 | Bad native id        | `INVOKE_NATIVE` |
 
 `vm_run` returns nothing, so the caller cannot tell a normal halt from an error. The `Error` enum in `error.h` is reserved for this and is not used yet.

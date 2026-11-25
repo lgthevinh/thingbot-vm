@@ -19,7 +19,7 @@ Stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `mai
 - [Branching](#branching)
   - [JMP](#jmp), [JNZ](#jnz)
 - [Calls](#calls)
-  - [CALL](#call), [RET](#ret), [INVOKE](#invoke), [INVOKE_NATIVE](#invoke_native)
+  - [CALL](#call), [RET](#ret), [INVOKE_STATIC](#invoke_static), [INVOKE_NATIVE](#invoke_native)
 - [Timing](#timing)
   - [WAIT](#wait)
 - [Errors](#errors)
@@ -57,7 +57,7 @@ Stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `mai
 | 15    | `CALL`          | Calls      | `target_pc` | `( -- )`            |
 | 16    | `RET`           | Calls      | -           | `( -- )`            |
 | 17    | `WAIT`          | Timing     | -           | `( ms -- )`         |
-| 18    | `INVOKE`        | Calls      | -           | -                   |
+| 18    | `INVOKE_STATIC` | Calls      | -           | -                   |
 | 19    | `INVOKE_NATIVE` | Calls      | `id`        | `( args -- )`       |
 
 ## Control
@@ -180,11 +180,11 @@ Returns from a subroutine.
 - Pops the return address from the call stack into `pc`.
 - Error: `RET` with an empty call stack halts the VM.
 
-### INVOKE
+### INVOKE_STATIC
 
 Reserved, not implemented yet.
 
-- Error: executing `INVOKE` logs `invoke not implemented` and halts the VM.
+- Error: executing `INVOKE_STATIC` logs `invoke static not implemented` and halts the VM.
 
 ### INVOKE_NATIVE
 
@@ -232,7 +232,7 @@ The VM does not return `Error` codes yet. On the conditions below it logs an err
 | Bad local index      | `LOAD` / `STORE` with `idx` outside `0 .. VM_LOCAL_SLOT - 1` |
 | Call stack overflow  | `CALL` with `VM_CALL_DEPTH` calls already active             |
 | Call stack underflow | `RET` with no active call                                    |
-| Not implemented      | `INVOKE`                                                     |
+| Not implemented      | `INVOKE_STATIC`                                              |
 | Bad native id        | `INVOKE_NATIVE` with `id` outside the native table           |
 
 Operand stack overflow/underflow and out-of-range jump/call targets are **not** checked, so `STACK_OVERFLOW` is never raised.

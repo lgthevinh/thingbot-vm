@@ -20,7 +20,7 @@ typedef enum {
     CALL,
     RET,
     WAIT,
-    INVOKE,
+    INVOKE_STATIC,
     INVOKE_NATIVE,
 
     // len on vm opcode
