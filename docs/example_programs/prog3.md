@@ -42,17 +42,17 @@ const int prog[] = {
     WAIT,
     CALL, 62,                      // 15: stop both motors
     PSH, 0,                        // 17: angle = 0
-    STORE, 0,
+    GSTORE, 0,
     PSH, 1,                        // 21: loop: servo 1 to angle
-    LOAD, 0,
+    GLOAD, 0,
     INVOKE_NATIVE, SERVO,
     PSH, 300,                      // 27: let the servo reach it
     WAIT,
-    LOAD, 0,                       // 30: angle += 30
+    GLOAD, 0,                      // 30: angle += 30
     PSH, 30,
     ADD,
-    STORE, 0,
-    LOAD, 0,                       // 37: loop while angle <= 180
+    GSTORE, 0,
+    GLOAD, 0,                      // 37: loop while angle <= 180
     PSH, 180,
     LTE,
     JNZ, 21,
@@ -82,7 +82,7 @@ const int prog[] = {
 ## How it works
 
 - The stop routine lives after `HLT` at pc 62 and is reached only through `CALL`. `RET` returns to pc 17.
-- `local[0]` holds the angle. The loop runs for 0, 30, … 180 (7 positions), then exits when the angle reaches 210.
+- `global[0]` holds the angle. The loop runs for 0, 30, … 180 (7 positions), then exits when the angle reaches 210.
 - If a motor turns the wrong way, swap its A/B pair in `motor_ch` in `act.c`.
 
 ## Expected output

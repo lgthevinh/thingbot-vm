@@ -5,12 +5,12 @@
 
 static const char *TAG = "vm";
 
-static bool check_local(engine_t *e, int idx) {
-    if (idx >= 0 && idx < VM_LOCAL_SLOT) {
+static bool check_global(engine_t *e, int idx) {
+    if (idx >= 0 && idx < VM_GLOBAL_SLOT) {
         return true;
     }
 
-    ESP_LOGE(TAG, "bad local idx %d, pc %d", idx, e->pc - 2);
+    ESP_LOGE(TAG, "bad global idx %d, pc %d", idx, e->pc - 2);
     e->status = ENGINE_HALTED;
     return false;
 }
@@ -90,24 +90,24 @@ static void op_mod(engine_t *e, const int *prog) {
     ESP_LOGD(TAG, "mod %d %% %d = %d, pc %d, sp %d", a, b, r, e->pc - 1, e->sp);
 }
 
-static void op_load(engine_t *e, const int *prog) {
+static void op_gload(engine_t *e, const int *prog) {
     int idx = engine_fetch(e, prog);
-    if (!check_local(e, idx)) {
+    if (!check_global(e, idx)) {
         return;
     }
-    engine_push(e, e->local[idx]);
+    engine_push(e, e->global[idx]);
 
-    ESP_LOGD(TAG, "load [%d] = %d, pc %d, sp %d", idx, e->local[idx], e->pc - 2, e->sp);
+    ESP_LOGD(TAG, "gload [%d] = %d, pc %d, sp %d", idx, e->global[idx], e->pc - 2, e->sp);
 }
 
-static void op_store(engine_t *e, const int *prog) {
+static void op_gstore(engine_t *e, const int *prog) {
     int idx = engine_fetch(e, prog);
-    if (!check_local(e, idx)) {
+    if (!check_global(e, idx)) {
         return;
     }
-    e->local[idx] = engine_pop(e);
+    e->global[idx] = engine_pop(e);
 
-    ESP_LOGD(TAG, "store [%d] = %d, pc %d, sp %d", idx, e->local[idx], e->pc - 2, e->sp);
+    ESP_LOGD(TAG, "gstore [%d] = %d, pc %d, sp %d", idx, e->global[idx], e->pc - 2, e->sp);
 }
 
 static void op_jmp(engine_t *e, const int *prog) {
@@ -231,8 +231,8 @@ const OpHandler op_handlers[OP_COUNT] = {
     [MUL] = op_mul,
     [DIV] = op_div,
     [MOD] = op_mod,
-    [LOAD] = op_load,
-    [STORE] = op_store,
+    [GLOAD] = op_gload,
+    [GSTORE] = op_gstore,
     [JMP] = op_jmp,
     [JNZ] = op_jnz,
     [GT] = op_gt,

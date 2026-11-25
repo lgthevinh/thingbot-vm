@@ -2,9 +2,9 @@
 
 #include "runtime.h"
 
-#define VM_LOCAL_SLOT 16 // local slots
-#define VM_STACK_LEN 256 // operand stack slots
-#define VM_CALL_DEPTH 8  // maximum nested calls
+#define VM_GLOBAL_SLOT 16 // global slots
+#define VM_STACK_LEN 256  // operand stack slots
+#define VM_CALL_DEPTH 8   // maximum nested calls
 
 typedef enum {
     ENGINE_HALTED,  // stopped by HLT or an error
@@ -21,7 +21,7 @@ struct engine_t {
     int call_sp;                   // index of the call stack top, -1 when empty
     int call_stack[VM_CALL_DEPTH]; // return addresses
 
-    int local[VM_LOCAL_SLOT];      // shared by the whole program, kept between runs
+    int global[VM_GLOBAL_SLOT];    // shared by the whole program, kept between programs
     EngineStatus status;
     int wait_ms;                   // pause requested by the last WAIT
 };

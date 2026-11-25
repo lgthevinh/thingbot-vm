@@ -21,7 +21,7 @@ halt
 // clang-format off
 const int prog[] = {
     PSH, 3,                        // 0:  count = 3
-    STORE, 0,                      // 2:  local[0] = count
+    GSTORE, 0,                     // 2:  global[0] = count
     PSH, 1,                        // 4:  loop: LED 1 on
     PSH, 100,
     INVOKE_NATIVE, LED,
@@ -36,11 +36,11 @@ const int prog[] = {
     INVOKE_NATIVE, BUZZ,
     PSH, 200,                      // 27: wait 200 ms
     WAIT,
-    LOAD, 0,                       // 30: count - 1
+    GLOAD, 0,                      // 30: count - 1
     PSH, 1,
     SUB,
-    STORE, 0,
-    LOAD, 0,                       // 37: loop while count != 0
+    GSTORE, 0,
+    GLOAD, 0,                      // 37: loop while count != 0
     JNZ, 4,
     HLT,                           // 41
 };
@@ -49,7 +49,7 @@ const int prog[] = {
 
 ## How it works
 
-- `local[0]` holds the loop counter. `JNZ` pops the condition, so the counter is loaded again after `STORE` to test it.
+- `global[0]` holds the loop counter. `JNZ` pops the condition, so the counter is loaded again after `GSTORE` to test it.
 - The PCA9685 keeps its last output after `HLT`, so the buzzer and LED are turned off before the program ends.
 
 ## Expected output

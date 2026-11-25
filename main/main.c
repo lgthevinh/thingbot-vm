@@ -15,7 +15,7 @@ void app_main(void) {
     // beep and blink LED 1 three times
     const int prog[] = {
         PSH, 3,                        // 0:  count = 3
-        STORE, 0,                      // 2:  local[0] = count
+        GSTORE, 0,                     // 2:  global[0] = count
         PSH, 1,                        // 4:  loop: LED 1 on
         PSH, 100,
         INVOKE_NATIVE, LED,
@@ -30,11 +30,11 @@ void app_main(void) {
         INVOKE_NATIVE, BUZZ,
         PSH, 200,                      // 27: wait 200 ms
         WAIT,
-        LOAD, 0,                       // 30: count - 1
+        GLOAD, 0,                      // 30: count - 1
         PSH, 1,
         SUB,
-        STORE, 0,
-        LOAD, 0,                       // 37: loop while count != 0
+        GSTORE, 0,
+        GLOAD, 0,                      // 37: loop while count != 0
         JNZ, 4,
         HLT,                           // 41
     };
