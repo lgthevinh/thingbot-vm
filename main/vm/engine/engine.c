@@ -11,7 +11,8 @@ void engine_reset(engine_t *e) {
     e->call_sp = -1;
     e->status = ENGINE_RUNNING;
 
-    // a program never sees the previous program's buffers
+    // a program never sees the previous program's globals or buffers
+    memset(e->global, 0, sizeof(e->global));
     memset(e->mem, 0, sizeof(e->mem));
 }
 

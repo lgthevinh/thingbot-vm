@@ -81,7 +81,7 @@ struct engine_t {
 |------------------|------:|----------------------|
 | `VM_STACK_LEN`   | 256   | Operand stack slots  |
 | `VM_GLOBAL_SLOT` | 256   | Global slots, 1 KB   |
-| `VM_CALL_DEPTH`  | 8     | Maximum nested calls |
+| `VM_CALL_DEPTH`  | 64    | Maximum nested calls |
 | `VM_MEM_LEN`     | 4096  | Linear memory bytes  |
 
 | `EngineStatus`   | Meaning                                                         |
@@ -338,14 +338,14 @@ Stack overflow checking is off (`CONFIG_STACK_CHECK_NONE`). To measure at runtim
 
 ### VM footprint
 
-`vm_t`, including its `engine_t`, is about 6.2 KB on the ESP32-C3:
+`vm_t`, including its `engine_t`, is about 6.4 KB on the ESP32-C3:
 
 | Part         | Size   |
 |--------------|-------:|
 | `mem`        | 4096 B |
 | `stack`      | 1024 B |
 | `global`     | 1024 B |
-| `call_stack` | 32 B   |
+| `call_stack` | 256 B  |
 | Other fields | ~36 B  |
 
 The `app_main` task stack is 3584 B (`CONFIG_ESP_MAIN_TASK_STACK_SIZE`), so `vm_t` and `runtime_t` are declared `static` in `main.c`.

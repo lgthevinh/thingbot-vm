@@ -5,7 +5,7 @@
 
 #define VM_GLOBAL_SLOT 256 // global slots, 1 KB
 #define VM_STACK_LEN 256   // operand stack slots
-#define VM_CALL_DEPTH 8    // maximum nested calls
+#define VM_CALL_DEPTH 64   // maximum nested calls
 #define VM_MEM_LEN 4096    // linear memory bytes
 
 typedef enum {
@@ -23,7 +23,7 @@ struct engine_t {
     int call_sp;                   // index of the call stack top, -1 when empty
     int call_stack[VM_CALL_DEPTH]; // return addresses
 
-    int global[VM_GLOBAL_SLOT];    // shared by the whole program, kept between programs
+    int global[VM_GLOBAL_SLOT];    // shared by the whole program, cleared on load
     uint8_t mem[VM_MEM_LEN];       // linear memory, little-endian words, cleared on load
     EngineStatus status;
     int wait_ms;                   // pause requested by the last WAIT
