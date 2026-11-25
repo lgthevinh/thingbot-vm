@@ -41,7 +41,7 @@ const int prog[] = {
 ## Expected output
 
 ```
-I (...) vm: halt, ip 20
+I (...) vm: halt, pc 20
 ```
 
 With the log level set to debug, each step is also traced (`psh`, `gt`, `jnz`, `mul`, …).

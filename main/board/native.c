@@ -9,7 +9,7 @@ static bool check_act(vm_t *vm, esp_err_t err) {
         return true;
     }
 
-    ESP_LOGE(TAG, "act failed: %s, ip %d", esp_err_to_name(err), vm->ip - 2);
+    ESP_LOGE(TAG, "act failed: %s, pc %d", esp_err_to_name(err), vm->pc - 2);
     vm->running = false;
     return false;
 }
@@ -22,7 +22,7 @@ static void native_motor(vm_t *vm) {
         return;
     }
 
-    ESP_LOGD(TAG, "motor %d speed %d, ip %d, sp %d", id, speed, vm->ip - 2, vm->sp);
+    ESP_LOGD(TAG, "motor %d speed %d, pc %d, sp %d", id, speed, vm->pc - 2, vm->sp);
 }
 
 static void native_servo(vm_t *vm) {
@@ -33,7 +33,7 @@ static void native_servo(vm_t *vm) {
         return;
     }
 
-    ESP_LOGD(TAG, "servo %d angle %d, ip %d, sp %d", id, angle, vm->ip - 2, vm->sp);
+    ESP_LOGD(TAG, "servo %d angle %d, pc %d, sp %d", id, angle, vm->pc - 2, vm->sp);
 }
 
 static void native_spin(vm_t *vm) {
@@ -44,7 +44,7 @@ static void native_spin(vm_t *vm) {
         return;
     }
 
-    ESP_LOGD(TAG, "spin %d speed %d, ip %d, sp %d", id, speed, vm->ip - 2, vm->sp);
+    ESP_LOGD(TAG, "spin %d speed %d, pc %d, sp %d", id, speed, vm->pc - 2, vm->sp);
 }
 
 static void native_buzz(vm_t *vm) {
@@ -54,7 +54,7 @@ static void native_buzz(vm_t *vm) {
         return;
     }
 
-    ESP_LOGD(TAG, "buzz duty %d, ip %d, sp %d", duty, vm->ip - 2, vm->sp);
+    ESP_LOGD(TAG, "buzz duty %d, pc %d, sp %d", duty, vm->pc - 2, vm->sp);
 }
 
 static void native_led(vm_t *vm) {
@@ -65,7 +65,7 @@ static void native_led(vm_t *vm) {
         return;
     }
 
-    ESP_LOGD(TAG, "led %d brightness %d, ip %d, sp %d", id, brightness, vm->ip - 2, vm->sp);
+    ESP_LOGD(TAG, "led %d brightness %d, pc %d, sp %d", id, brightness, vm->pc - 2, vm->sp);
 }
 
 const NativeFn thingbot_natives[NATIVE_COUNT] = {

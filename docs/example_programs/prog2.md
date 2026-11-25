@@ -58,5 +58,5 @@ The VM halts about 1.2 s after start (6 × 200 ms):
 
 ```
 I (253) main_task: Calling app_main()
-I (1463) vm: halt, ip 41
+I (1463) vm: halt, pc 41
 ```

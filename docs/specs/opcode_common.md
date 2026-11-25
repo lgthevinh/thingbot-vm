@@ -46,15 +46,15 @@ Stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `mai
 | 4     | `MUL`           | Arithmetic | -           | `( a b -- a*b )`    |
 | 5     | `LOAD`          | Locals     | `idx`       | `( -- local[idx] )` |
 | 6     | `STORE`         | Locals     | `idx`       | `( v -- )`          |
-| 7     | `JMP`           | Branching  | `target_ip` | `( -- )`            |
-| 8     | `JNZ`           | Branching  | `target_ip` | `( cond -- )`       |
+| 7     | `JMP`           | Branching  | `target_pc` | `( -- )`            |
+| 8     | `JNZ`           | Branching  | `target_pc` | `( cond -- )`       |
 | 9     | `GT`            | Comparison | -           | `( a b -- a>b )`    |
 | 10    | `GTE`           | Comparison | -           | `( a b -- a>=b )`   |
 | 11    | `LT`            | Comparison | -           | `( a b -- a<b )`    |
 | 12    | `LTE`           | Comparison | -           | `( a b -- a<=b )`   |
 | 13    | `EQ`            | Comparison | -           | `( a b -- a==b )`   |
 | 14    | `NEQ`           | Comparison | -           | `( a b -- a!=b )`   |
-| 15    | `CALL`          | Calls      | `target_ip` | `( -- )`            |
+| 15    | `CALL`          | Calls      | `target_pc` | `( -- )`            |
 | 16    | `RET`           | Calls      | -           | `( -- )`            |
 | 17    | `WAIT`          | Timing     | -           | `( ms -- )`         |
 | 18    | `INVOKE`        | Calls      | -           | -                   |
@@ -146,17 +146,17 @@ Pops the top of the stack into a local slot.
 
 Unconditional jump.
 
-- Operand: `target_ip`
+- Operand: `target_pc`
 - Stack effect: `( -- )`
-- Sets `ip = target_ip`.
+- Sets `pc = target_pc`.
 
 ### JNZ
 
 Conditional jump. The condition is always popped, so loops do not grow the stack.
 
-- Operand: `target_ip`
+- Operand: `target_pc`
 - Stack effect: `( cond -- )`
-- Sets `ip = target_ip` if `cond != 0`; otherwise continues with the next instruction.
+- Sets `pc = target_pc` if `cond != 0`; otherwise continues with the next instruction.
 
 ## Calls
 
@@ -166,9 +166,9 @@ Return addresses are kept on a separate call stack, up to `VM_CALL_DEPTH` deep. 
 
 Calls a subroutine.
 
-- Operand: `target_ip`
+- Operand: `target_pc`
 - Stack effect: `( -- )`
-- Pushes the address of the next instruction onto the call stack, then sets `ip = target_ip`.
+- Pushes the address of the next instruction onto the call stack, then sets `pc = target_pc`.
 - Error: calling when the call stack already holds `VM_CALL_DEPTH` entries halts the VM.
 
 ### RET
@@ -177,7 +177,7 @@ Returns from a subroutine.
 
 - Operand: none
 - Stack effect: `( -- )`
-- Pops the return address from the call stack into `ip`.
+- Pops the return address from the call stack into `pc`.
 - Error: `RET` with an empty call stack halts the VM.
 
 ### INVOKE

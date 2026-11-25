@@ -81,7 +81,7 @@ const int prog[] = {
 
 ## How it works
 
-- The stop routine lives after `HLT` at ip 62 and is reached only through `CALL`. `RET` returns to ip 17.
+- The stop routine lives after `HLT` at pc 62 and is reached only through `CALL`. `RET` returns to pc 17.
 - `local[0]` holds the angle. The loop runs for 0, 30, … 180 (7 positions), then exits when the angle reaches 210.
 - If a motor turns the wrong way, swap its A/B pair in `motor_ch` in `act.c`.
 
@@ -90,5 +90,5 @@ const int prog[] = {
 Not yet run on hardware. The VM should halt after about 3.2 s (1000 ms drive + 7 × 300 ms sweep + 100 ms beep):
 
 ```
-I (...) vm: halt, ip 61
+I (...) vm: halt, pc 61
 ```

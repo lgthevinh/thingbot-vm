@@ -14,7 +14,7 @@ void vm_init(vm_t *vm, void *ctx, const NativeFn *natives, int native_count) {
 
 void vm_run(vm_t *vm, const int *prog) {
     vm->prog = prog;
-    vm->ip = 0;  // instruction_pointer
+    vm->pc = 0;  // program_counter
     vm->sp = -1; // stack_pointer
     vm->call_sp = -1;
     vm->running = true;
@@ -27,7 +27,7 @@ void vm_run(vm_t *vm, const int *prog) {
 
 static void vm_exec(vm_t *vm, int opcode) {
     if (opcode < 0 || opcode >= OP_COUNT || op_handlers[opcode] == NULL) {
-        ESP_LOGE(TAG, "bad opcode %d, ip %d", opcode, vm->ip - 1);
+        ESP_LOGE(TAG, "bad opcode %d, pc %d", opcode, vm->pc - 1);
         vm->running = false;
         return;
     }

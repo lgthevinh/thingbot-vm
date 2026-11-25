@@ -32,7 +32,7 @@ All VM state lives in one `vm_t` (`vm/vm.h`):
 ```c
 typedef struct {
     const int *prog;               // program being run
-    int ip;                        // index of the next slot to fetch
+    int pc;                        // index of the next slot to fetch
     int sp;                        // index of the operand stack top, -1 when empty
     int stack[VM_STACK_LEN];       // operand stack
     int call_sp;                   // index of the call stack top, -1 when empty
@@ -72,7 +72,7 @@ const int prog[] = {
 
 | Register                  | Holds                                                                       |
 |---------------------------|-----------------------------------------------------------------------------|
-| `ip`                      | Index of the next slot to fetch                                             |
+| `pc`                      | Index of the next slot to fetch                                             |
 | `sp`                      | Index of the operand stack top, `-1` when empty                             |
 | `call_sp`                 | Index of the call stack top, `-1` when empty                                |
 | `running`                 | Run loop continues while `true`, cleared by `HLT` or error                  |
@@ -92,7 +92,7 @@ const int prog[] = {
 
 ### Call stack
 
-`call_stack` holds return addresses only: no arguments, locals or saved `sp`. `CALL` pushes the index of the slot after its operand and jumps; `RET` pops it back into `ip`. Overflow and underflow are checked. Arguments and return values pass through the operand stack.
+`call_stack` holds return addresses only: no arguments, locals or saved `sp`. `CALL` pushes the index of the slot after its operand and jumps; `RET` pops it back into `pc`. Overflow and underflow are checked. Arguments and return values pass through the operand stack.
 
 ## Source layout
 
@@ -131,7 +131,7 @@ Stores the board context and the native table. Called once before the first run.
 
 Resets the VM and runs `prog` until it halts:
 
-- `prog = prog`, `ip = 0`, `sp = -1`, `call_sp = -1`, `running = true`
+- `prog = prog`, `pc = 0`, `sp = -1`, `call_sp = -1`, `running = true`
 - `local`, `ctx` and the native table are kept.
 
 `vm_run` blocks until the program halts. The same `vm_t` can run several programs one after another.
@@ -140,13 +140,13 @@ Resets the VM and runs `prog` until it halts:
 
 ```
 while running:
-    opcode = prog[ip++]
+    opcode = prog[pc++]
     dispatch(opcode)
 ```
 
-- Handlers that take an operand fetch it with `vm_fetch`, which also advances `ip`.
-- After a handler returns, `ip` points at the next instruction unless the handler changed it (`JMP`, `JNZ`, `CALL`, `RET`).
-- Log lines report `ip` as the index of the instruction being executed: `ip - 1` for opcodes without an operand, `ip - 2` for opcodes with one.
+- Handlers that take an operand fetch it with `vm_fetch`, which also advances `pc`.
+- After a handler returns, `pc` points at the next instruction unless the handler changed it (`JMP`, `JNZ`, `CALL`, `RET`).
+- Log lines report `pc` as the index of the instruction being executed: `pc - 1` for opcodes without an operand, `pc - 2` for opcodes with one.
 
 ## Dispatch
 
@@ -266,7 +266,7 @@ These are not checked and lead to undefined behaviour:
 
 - **Operand stack overflow/underflow:** pushing more than `VM_STACK_LEN` values, or popping from an empty stack.
 - **Running past the end of the program:** a path that does not end with `HLT`.
-- **Out-of-range jump/call targets:** `JMP`, `JNZ` and `CALL` set `ip` to any value.
+- **Out-of-range jump/call targets:** `JMP`, `JNZ` and `CALL` set `pc` to any value.
 
 Other behaviour to be aware of:
 
