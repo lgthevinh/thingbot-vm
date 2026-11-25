@@ -27,7 +27,7 @@ def stop():
     motor(2, 0)
 ```
 
-## Program
+## Thingcode program
 
 ```c
 // clang-format off

@@ -1,6 +1,6 @@
-# Opcode Specification
+# Thingcode Opcode Specification
 
-Stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `main/vm/vm.c` to the handlers in `main/vm/handler.c`. Error codes are defined in `main/vm/error.h`. Board functions reached through `INVOKE_NATIVE` are specified in [opcode_board.md](opcode_board.md).
+Thingcode is the bytecode run by the stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `main/vm/vm.c` to the handlers in `main/vm/handler.c`. Error codes are defined in `main/vm/error.h`. Board functions reached through `INVOKE_NATIVE` are specified in [opcode_board.md](opcode_board.md).
 
 ## Table of Contents
 
@@ -28,7 +28,7 @@ Stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `mai
 
 ## Conventions
 
-- Program is an array of `int`. Each opcode occupies one slot; its operand (if any) occupies the next slot.
+- A Thingcode program is an array of `int`. Each opcode occupies one slot; its operand (if any) occupies the next slot.
 - Stack effect notation: `( before -- after )`, top of stack on the right.
 - For binary operators, `a` is the value pushed first and `b` is the value pushed last (top of stack).
 - Comparison results are `1` (true) or `0` (false).

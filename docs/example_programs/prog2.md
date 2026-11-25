@@ -15,7 +15,7 @@ repeat 3 times:
 halt
 ```
 
-## Program
+## Thingcode program
 
 ```c
 // clang-format off

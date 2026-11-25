@@ -11,7 +11,7 @@ while x <= 1000:
 halt
 ```
 
-## Program
+## Thingcode program
 
 ```c
 // clang-format off

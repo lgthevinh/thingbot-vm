@@ -1,12 +1,12 @@
 # Virtual machine Specifications
 
-Stack-based VM running on ThingBot (ESP32-C3). The core (`vm/`) has no hardware dependencies; board-specific code lives in `main/board/` as natives, called with `INVOKE_NATIVE` through a table and a context pointer registered with `vm_init`. Opcode semantics are specified in [opcode_common.md](opcode_common.md).
+Stack-based VM that runs Thingcode programs on ThingBot (ESP32-C3). The core (`vm/`) has no hardware dependencies; board-specific code lives in `main/board/` as natives, called with `INVOKE_NATIVE` through a table and a context pointer registered with `vm_init`. Opcode semantics are specified in [opcode_common.md](opcode_common.md).
 
 ## Table of Contents
 
 - [Architecture](#architecture)
   - [Word](#word)
-  - [Program](#program)
+  - [Thingcode program](#thingcode-program)
   - [Registers](#registers)
   - [Operand stack](#operand-stack)
   - [Locals](#locals)
@@ -55,9 +55,9 @@ typedef struct {
 
 The only data type is the C `int`, which is 32-bit signed on the ESP32-C3. Program slots, stack entries, locals and return addresses are all `int`. Comparisons produce `1` or `0`, and `JNZ` treats any non-zero value as true.
 
-### Program
+### Thingcode program
 
-A program is a `const int` array, addressed by slot index. Each opcode takes one slot, and its operand, if it has one, takes the next slot. There is no header and no length, so a program ends where its `HLT` is executed. Jump and call targets are slot indices.
+A Thingcode program is a `const int` array, addressed by slot index. Each opcode takes one slot, and its operand, if it has one, takes the next slot. There is no header and no length, so a program ends where its `HLT` is executed. Jump and call targets are slot indices.
 
 ```c
 const int prog[] = {
