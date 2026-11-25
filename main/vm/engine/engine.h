@@ -1,16 +1,10 @@
 #pragma once
 
+#include "runtime.h"
+
 #define VM_LOCAL_SLOT 16 // local slots
 #define VM_STACK_LEN 256 // operand stack slots
 #define VM_CALL_DEPTH 8  // maximum nested calls
-
-typedef struct engine_t engine_t;
-
-// Board environment that natives act on, defined by the board
-typedef struct runtime_t runtime_t;
-
-// Runtime function called by INVOKE_NATIVE, pops its arguments from the operand stack
-typedef void (*NativeFn)(engine_t *e, runtime_t *rt);
 
 typedef enum {
     ENGINE_HALTED,  // stopped by HLT or an error
@@ -33,7 +27,7 @@ struct engine_t {
 };
 
 void engine_reset(engine_t *e);
-void engine_step(engine_t *e, const int *prog, const NativeFn *natives, int native_count, runtime_t *rt);
+void engine_step(engine_t *e, const int *prog, const native_table_t *common, const native_table_t *specific, runtime_t *rt);
 
 static inline int engine_fetch(engine_t *e, const int *prog) {
     return prog[e->pc++];

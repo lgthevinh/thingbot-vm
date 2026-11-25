@@ -1,6 +1,6 @@
-# Board Native Specification
+# ThingBot Native Specification
 
-ThingBot natives that drive the actuators on the PCA9685, called with [`INVOKE_NATIVE id`](opcode_common.md#invoke_native). They follow the conventions in [opcode_common.md](opcode_common.md). Native ids are defined by `NativeId` in `main/board/native.h`, implemented in `main/board/native.c`, and reach the hardware through the `act_*` functions in `main/board/act.c` via the runtime (`rt->act`, see [vm.md](vm.md#runtime)). `main` registers the table with `vm_init(&vm, &runtime, thingbot_natives, NATIVE_COUNT)`.
+ThingBot natives that drive the actuators on the PCA9685, called with [`INVOKE_NATIVE id`](opcode.md#invoke_native). They are all runtime-specific, so their ids start at `0x8000` (see [native_common.md](native_common.md#id-ranges)); ThingBot has no common natives yet. They follow the conventions in [opcode.md](opcode.md). Native ids are defined by `NativeId` in `main/native/native.h`, implemented in `main/native/native.c`, and reach the hardware through the `act_*` functions in `main/native/board/act.c` via the runtime (`rt->act`, see [vm.md](vm.md#runtime)). `main` registers the tables with `vm_init(&vm, &runtime, &thingbot_common, &thingbot_specific)`.
 
 ## Table of Contents
 
@@ -23,13 +23,13 @@ PSH, 1, PSH, 80, INVOKE_NATIVE, MOTOR,   // motor M1 at speed 80
 
 ## Native Summary
 
-| Id | Name    | Stack effect           | Range       | Calls                 |
-|---:|---------|------------------------|-------------|-----------------------|
-| 0  | `MOTOR` | `( id speed -- )`      | -100 .. 100 | `act_set_motor_speed` |
-| 1  | `SERVO` | `( id angle -- )`      | 0 .. 180    | `act_set_servo_angle` |
-| 2  | `SPIN`  | `( id speed -- )`      | -100 .. 100 | `act_set_servo_speed` |
-| 3  | `BUZZ`  | `( duty -- )`          | 0 .. 100    | `act_set_buzzer`      |
-| 4  | `LED`   | `( id brightness -- )` | 0 .. 100    | `act_set_led`         |
+| Id       | Name    | Stack effect           | Range       | Calls                 |
+|---------:|---------|------------------------|-------------|-----------------------|
+| `0x8000` | `MOTOR` | `( id speed -- )`      | -100 .. 100 | `act_set_motor_speed` |
+| `0x8001` | `SERVO` | `( id angle -- )`      | 0 .. 180    | `act_set_servo_angle` |
+| `0x8002` | `SPIN`  | `( id speed -- )`      | -100 .. 100 | `act_set_servo_speed` |
+| `0x8003` | `BUZZ`  | `( duty -- )`          | 0 .. 100    | `act_set_buzzer`      |
+| `0x8004` | `LED`   | `( id brightness -- )` | 0 .. 100    | `act_set_led`         |
 
 Values outside the range are clamped, not rejected.
 
@@ -102,7 +102,7 @@ Sets the brightness of an LED.
 
 ## Errors
 
-Natives follow the halting behavior in [opcode_common.md](opcode_common.md#current-behavior). A native logs and halts when its `act_*` call fails. A native id outside the table is rejected by `INVOKE_NATIVE` before any native runs:
+Natives follow the halting behavior in [opcode.md](opcode.md#current-behavior). A native logs and halts when its `act_*` call fails. A native id outside the table is rejected by `INVOKE_NATIVE` before any native runs:
 
 | Condition       | Trigger                                                               |
 |-----------------|-----------------------------------------------------------------------|

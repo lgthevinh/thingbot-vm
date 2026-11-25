@@ -2,7 +2,6 @@
 #include "freertos/task.h"
 #include "native.h"
 #include "opcode.h"
-#include "runtime.h"
 #include "vm.h"
 
 #define I2C_SCL_GPIO GPIO_NUM_9
@@ -59,7 +58,7 @@ void app_main(void) {
     io_set_i2c(&runtime.io, i2c_bus);
     ESP_ERROR_CHECK(act_init(&runtime.act, runtime.io.i2c_bus));
 
-    vm_init(&vm, &runtime, thingbot_natives, NATIVE_COUNT);
+    vm_init(&vm, &runtime, &thingbot_common, &thingbot_specific);
     vm_load(&vm, prog);
 
     // block the task on WAIT instead of spinning so the idle task and watchdog keep running

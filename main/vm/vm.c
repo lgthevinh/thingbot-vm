@@ -1,9 +1,9 @@
 #include "vm.h"
 
-void vm_init(vm_t *vm, runtime_t *runtime, const NativeFn *natives, int native_count) {
+void vm_init(vm_t *vm, runtime_t *runtime, const native_table_t *common, const native_table_t *specific) {
     vm->runtime = runtime;
-    vm->natives = natives;
-    vm->native_count = native_count;
+    vm->common = common;
+    vm->specific = specific;
 }
 
 void vm_load(vm_t *vm, const int *prog) {
@@ -18,7 +18,7 @@ EngineStatus vm_run(vm_t *vm) {
     }
 
     while (vm->engine.status == ENGINE_RUNNING) {
-        engine_step(&vm->engine, vm->prog, vm->natives, vm->native_count, vm->runtime);
+        engine_step(&vm->engine, vm->prog, vm->common, vm->specific, vm->runtime);
     }
 
     return vm->engine.status;

@@ -10,11 +10,12 @@ A small stack-based virtual machine for ThingBot that runs Thingcode programs, o
 
 ## Docs
 
-| Doc                                             | Covers                                                                    |
-|-------------------------------------------------|---------------------------------------------------------------------------|
-| [VM spec](docs/specs/vm.md)                     | Vm / Engine / Runtime split, lifecycle, dispatch, natives, memory, errors |
-| [Opcode spec](docs/specs/opcode_common.md)      | Thingcode opcodes: operand, stack effect, behaviour, errors               |
-| [Board native spec](docs/specs/opcode_board.md) | ThingBot natives for `INVOKE_NATIVE`, PCA9685 channel map                 |
+| Doc                                                   | Covers                                                                    |
+|-------------------------------------------------------|---------------------------------------------------------------------------|
+| [VM spec](docs/specs/vm.md)                           | Vm / Engine / Runtime split, lifecycle, dispatch, natives, memory, errors |
+| [Opcode spec](docs/specs/opcode.md)                   | Thingcode opcodes: operand, stack effect, behaviour, errors               |
+| [Common native spec](docs/specs/native_common.md)     | Native id ranges, natives every runtime provides                          |
+| [ThingBot native spec](docs/specs/native_thingbot.md) | ThingBot natives for `INVOKE_NATIVE`, PCA9685 channel map                 |
 
 ## Build
 

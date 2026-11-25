@@ -1,6 +1,6 @@
 # Thingcode Opcode Specification
 
-Thingcode is the bytecode run by the stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched by `engine_step` in `main/vm/engine.c` to the handlers in `main/vm/handler.c`. Error codes are defined in `main/vm/error.h`. Board functions reached through `INVOKE_NATIVE` are specified in [opcode_board.md](opcode_board.md).
+Thingcode is the bytecode run by the stack-based VM. Opcodes are defined in `main/vm/engine/opcode.h` and dispatched by `engine_step` in `main/vm/engine/engine.c` to the handlers in `main/vm/engine/handler.c`. Error codes are defined in `main/vm/engine/error.h`. Runtime functions reached through `INVOKE_NATIVE` are specified in [native_common.md](native_common.md) and, for ThingBot, [native_thingbot.md](native_thingbot.md).
 
 ## Table of Contents
 
@@ -204,13 +204,13 @@ Reserved, not implemented yet.
 
 ### INVOKE_NATIVE
 
-Calls a board function from the native table registered with `vm_init`.
+Calls a runtime function from the native tables registered with `vm_init`.
 
-- Operand: `id`, an index into the native table
+- Operand: `id`, a 16-bit native id. `0x0000 .. 0x7FFF` are common natives, available on every runtime; `0x8000 .. 0xFFFF` are specific to one runtime (see [native_common.md](native_common.md#id-ranges)).
 - Stack effect: `( args -- )`, depends on the native; each native pops its own arguments
 - Does not touch the call stack.
-- Error: `id` outside `0 .. native_count - 1`, or with no entry, halts the VM.
-- Errors raised by the native itself are listed in [opcode_board.md](opcode_board.md#errors).
+- Error: `id` outside `0 .. 0xFFFF`, past the end of its table, or with no entry halts the VM.
+- Errors raised by the native itself are listed in [native_thingbot.md](native_thingbot.md#errors) for ThingBot.
 
 ## Timing
 
@@ -250,6 +250,6 @@ The VM does not return `Error` codes yet. On the conditions below it logs an err
 | Call stack overflow  | `CALL` with `VM_CALL_DEPTH` calls already active             |
 | Call stack underflow | `RET` with no active call                                    |
 | Not implemented      | `INVOKE_STATIC`                                              |
-| Bad native id        | `INVOKE_NATIVE` with `id` outside the native table           |
+| Bad native id        | `INVOKE_NATIVE` with `id` not in the native tables           |
 
 Operand stack overflow/underflow and out-of-range jump/call targets are **not** checked, so `STACK_OVERFLOW` is never raised.

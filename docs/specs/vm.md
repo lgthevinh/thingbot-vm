@@ -1,6 +1,6 @@
 # Virtual machine Specifications
 
-Stack-based VM that runs Thingcode programs on ThingBot (ESP32-C3). It is split in three parts: the **Engine** interprets the program, the **Runtime** is the board environment that natives act on, and the **Vm** ties them together and is what `main` uses. The core (`vm/`) has no hardware or FreeRTOS dependencies. Board-specific code lives in `main/board/` as the runtime and its natives, called with `INVOKE_NATIVE`. Opcode semantics are specified in [opcode_common.md](opcode_common.md).
+Stack-based VM that runs Thingcode programs on ThingBot (ESP32-C3). It is split in three parts: the **Engine** interprets the program, the **Runtime** is the board environment that natives act on, and the **Vm** ties them together and is what `main` uses. The core (`vm/`) has no hardware or FreeRTOS dependencies. Board-specific code lives in `main/native/`: the runtime and its natives, called with `INVOKE_NATIVE`, on top of the hardware layer in `main/native/board/`. Opcode semantics are specified in [opcode.md](opcode.md).
 
 ## Table of Contents
 
@@ -22,6 +22,8 @@ Stack-based VM that runs Thingcode programs on ThingBot (ESP32-C3). It is split 
 - [Execution loop](#execution-loop)
 - [Dispatch](#dispatch)
 - [Natives](#natives)
+  - [Id ranges](#id-ranges)
+  - [Tables](#tables)
 - [Memory](#memory)
   - [ESP32-C3](#esp32-c3)
   - [VM footprint](#vm-footprint)
@@ -31,25 +33,26 @@ Stack-based VM that runs Thingcode programs on ThingBot (ESP32-C3). It is split 
 ## Architecture
 
 ```
-vm_t ──owns──▶ prog, natives, engine_t
+vm_t ──owns──▶ prog, engine_t
   │
+  ├──points to──▶ common, specific native tables
   └──points to──▶ runtime_t (board)
 
-vm_run ──▶ engine_step(engine, prog, natives, runtime)
-                └─ INVOKE_NATIVE ──▶ natives[id](engine, runtime)
+vm_run ──▶ engine_step(engine, prog, common, specific, runtime)
+                └─ INVOKE_NATIVE id ──▶ fn(engine, runtime)
 ```
 
 ### Vm
 
-`vm_t` (`vm/vm.h`) is the facade. It holds the program, the native table and the engine, and points to the runtime. It exposes `vm_init`, `vm_load` and `vm_run`, and passes the runtime to the engine on every step.
+`vm_t` (`vm/vm.h`) is the facade. It holds the program and the engine, points to the two native tables, and to the runtime. It exposes `vm_init`, `vm_load` and `vm_run`, and passes the runtime to the engine on every step.
 
 ```c
 typedef struct {
-    const int *prog;         // program being run
-    const NativeFn *natives; // runtime functions, indexed by INVOKE_NATIVE id
-    int native_count;        // number of entries in natives
+    const int *prog;                // program being run
+    const native_table_t *common;   // natives every runtime provides, ids below NATIVE_SPECIFIC_BASE
+    const native_table_t *specific; // natives of this runtime only, ids from NATIVE_SPECIFIC_BASE
     engine_t engine;
-    runtime_t *runtime;      // board environment, passed to every native
+    runtime_t *runtime;             // board environment, passed to every native
 } vm_t;
 ```
 
@@ -57,7 +60,7 @@ The runtime is held by pointer: its contents are defined by the board, so `vm.h`
 
 ### Engine
 
-`engine_t` (`vm/engine.h`) is the interpreter only. It holds the registers, the operand stack, the call stack and the locals, and executes one instruction per `engine_step`. It exposes `engine_push` and `engine_pop` so natives can reach the operand stack. It knows nothing about the board.
+`engine_t` (`vm/engine/engine.h`) is the interpreter only. It holds the registers, the operand stack, the call stack and the locals, and executes one instruction per `engine_step`. It exposes `engine_push` and `engine_pop` so natives can reach the operand stack. It knows nothing about the board.
 
 ```c
 struct engine_t {
@@ -86,7 +89,7 @@ struct engine_t {
 
 ### Runtime
 
-`runtime_t` is the board environment that natives act on, and the context passed to every native. The core only declares the name (`typedef struct runtime_t runtime_t;` in `engine.h`) and never reads it. The board defines its contents. On ThingBot (`board/runtime.h`):
+`runtime_t` is the board environment that natives act on, and the context passed to every native. The core only declares the name, together with `NativeFn`, `native_table_t` and the id ranges, in `vm/runtime/runtime.h`, and never reads it. The board defines its contents. On ThingBot (`native/native.h`):
 
 ```c
 struct runtime_t {
@@ -143,19 +146,31 @@ Held by the engine.
 
 ## Source layout
 
-| Module                 | Role                                                                    |
-|------------------------|-------------------------------------------------------------------------|
-| `vm/vm.h`, `vm.c`      | Vm facade: `vm_init`, `vm_load`, `vm_run`                               |
-| `vm/engine.h`, `.c`    | Engine state, `NativeFn`, `runtime_t` name, fetch/push/pop, `engine_step` |
-| `vm/opcode.h`          | `OpCode` enum, `OP_COUNT`                                               |
-| `vm/handler.h/.c`      | One handler per opcode and the `op_handlers` dispatch table             |
-| `vm/error.h`           | `Error` enum (not used yet)                                             |
-| `board/runtime.h`      | `runtime_t` contents for ThingBot                                       |
-| `board/native.h/.c`    | ThingBot natives, `NativeId` and the `thingbot_natives` table           |
-| `board/io.h/.c`        | I2C bus, SPI host and GPIO pin masks                                    |
-| `board/act.h/.c`       | Actuators on the PCA9685                                                |
+```
+main/
+  main.c
+  vm/
+    vm.h  vm.c
+    engine/    engine.h engine.c  handler.h handler.c  opcode.h  error.h
+    runtime/   runtime.h
+  native/
+    native.h  native.c
+    board/     io.h io.c  act.h act.c
+```
 
-Nothing in `vm/` includes a `board/`, ESP-IDF driver or FreeRTOS header; the dependency runs one way, from `board/` to `engine.h`. `engine.c`, `handler.c` and `native.c` use `esp_log.h` for logging.
+| Module                       | Role                                                                     |
+|------------------------------|--------------------------------------------------------------------------|
+| `vm/vm.h/.c`                 | Vm facade: `vm_init`, `vm_load`, `vm_run`                                |
+| `vm/engine/engine.h/.c`      | Engine state, fetch/push/pop, `engine_step`                              |
+| `vm/engine/handler.h/.c`     | One handler per opcode and the `op_handlers` dispatch table              |
+| `vm/engine/opcode.h`         | `OpCode` enum, `OP_COUNT`                                                |
+| `vm/engine/error.h`          | `Error` enum (not used yet)                                              |
+| `vm/runtime/runtime.h`       | `runtime_t` name, `NativeFn`, `native_table_t`, native id ranges         |
+| `native/native.h/.c`         | ThingBot `runtime_t` contents, natives, `NativeId`, native tables        |
+| `native/board/io.h/.c`       | I2C bus, SPI host and GPIO pin masks                                     |
+| `native/board/act.h/.c`      | Actuators on the PCA9685                                                 |
+
+Nothing in `vm/` includes a `native/`, ESP-IDF driver or FreeRTOS header; the dependency runs one way, from `native/` to `runtime.h` and `engine.h`. `engine.c`, `handler.c` and `native.c` use `esp_log.h` for logging.
 
 ## Lifecycle
 
@@ -163,7 +178,7 @@ Nothing in `vm/` includes a `board/`, ESP-IDF driver or FreeRTOS header; the dep
 static runtime_t runtime;
 static vm_t vm;
 
-vm_init(&vm, &runtime, thingbot_natives, NATIVE_COUNT);
+vm_init(&vm, &runtime, &thingbot_common, &thingbot_specific);
 vm_load(&vm, prog);
 
 while (vm_run(&vm) == ENGINE_WAITING) {
@@ -173,9 +188,9 @@ while (vm_run(&vm) == ENGINE_WAITING) {
 
 ### vm_init
 
-`void vm_init(vm_t *vm, runtime_t *runtime, const NativeFn *natives, int native_count)`
+`void vm_init(vm_t *vm, runtime_t *runtime, const native_table_t *common, const native_table_t *specific)`
 
-Stores the runtime and the native table. Called once before the first load.
+Stores the runtime and its two native tables (see [Natives](#natives)). Called once before the first load.
 
 ### vm_load
 
@@ -184,7 +199,7 @@ Stores the runtime and the native table. Called once before the first load.
 Sets `prog` and resets the engine to its start:
 
 - `pc = 0`, `sp = -1`, `call_sp = -1`, `status = ENGINE_RUNNING`
-- `local`, the runtime and the native table are kept.
+- `local`, the runtime and the native tables are kept.
 
 The same `vm_t` can load and run several programs one after another.
 
@@ -217,7 +232,7 @@ vm_run:
 
 `engine_step` in `engine.c` dispatches each opcode:
 
-- `INVOKE_NATIVE` is handled by `engine_step` itself, since it is the only opcode that needs the native table and the runtime (see [Natives](#natives)).
+- `INVOKE_NATIVE` is handled by `engine_step` itself, since it is the only opcode that needs the native tables and the runtime (see [Natives](#natives)).
 - Every other opcode goes through `op_handlers` in `handler.c`, a table of `OpHandler` (`void (*)(engine_t *, const int *prog)`) indexed by opcode and sized `OP_COUNT`.
 
 Before calling a handler, `engine_step` checks that:
@@ -232,7 +247,7 @@ Adding an opcode:
 1. Add it to `OpCode` before `OP_COUNT`.
 2. Write `static void op_<name>(engine_t *e, const int *prog)` in `handler.c`.
 3. Add `[<NAME>] = op_<name>` to `op_handlers`.
-4. Document it in [opcode_common.md](opcode_common.md).
+4. Document it in [opcode.md](opcode.md).
 
 Board functions are added as natives instead (see [Natives](#natives)).
 
@@ -244,16 +259,37 @@ A native is a runtime function that receives the engine and the runtime:
 typedef void (*NativeFn)(engine_t *e, runtime_t *rt);
 ```
 
-`INVOKE_NATIVE id` fetches `id`, checks `0 <= id < native_count` and that `natives[id]` is not `NULL`, then calls `natives[id](engine, runtime)`. Otherwise it logs `bad native id` and halts. A native pops its own arguments with `engine_pop`, reaches hardware through `rt`, and halts by setting `e->status = ENGINE_HALTED` on error.
+A native is a runtime function that receives the engine and the runtime. It pops its own arguments with `engine_pop`, reaches hardware through `rt`, and halts by setting `e->status = ENGINE_HALTED` on error.
 
-The table belongs to the board. On ThingBot it is `thingbot_natives`, indexed by `NativeId` in `board/native.h`, and sized `NATIVE_COUNT`. Ids are listed in [opcode_board.md](opcode_board.md). Another board registers its own runtime and table, so the same opcodes run on any board, and only the native ids differ.
+### Id ranges
 
-Adding a native:
+Native ids are 16-bit. `0x0000 .. 0x7FFF` are common natives, provided by every runtime; `0x8000 .. 0xFFFF` are specific to one runtime. The ranges and the common natives are specified in [native_common.md](native_common.md).
 
-1. Add it to `NativeId` before `NATIVE_COUNT`.
+### Tables
+
+A runtime registers one table per range with `vm_init`:
+
+```c
+typedef struct {
+    const NativeFn *fns; // fns[i] is id base + i
+    int count;
+} native_table_t;
+```
+
+Each table is dense from its base: `common->fns[id]` and `specific->fns[id - NATIVE_SPECIFIC_BASE]`. A table with no natives is `{0}`.
+
+`INVOKE_NATIVE id` picks the table by bit 15, then checks that the index is below `count` and the entry is not `NULL`, and calls `fn(engine, runtime)`. An `id` outside `0 .. 0xFFFF`, past the end of its table, or with no entry logs `bad native id` and halts.
+
+On ThingBot the tables are `thingbot_common` (empty) and `thingbot_specific`, in `native/native.c`. Ids are defined by `NativeId` in `native/native.h` and listed in [native_thingbot.md](native_thingbot.md).
+
+Adding a specific native:
+
+1. Add it to `NativeId` before `NATIVE_END`.
 2. Write `static void native_<name>(engine_t *e, runtime_t *rt)` in `native.c`.
-3. Add `[<NAME>] = native_<name>` to `thingbot_natives`.
-4. Document it in [opcode_board.md](opcode_board.md).
+3. Add `[<NAME> - NATIVE_SPECIFIC_BASE] = native_<name>` to `specific_fns`.
+4. Document it in [native_thingbot.md](native_thingbot.md).
+
+Common natives are added for all runtimes at once (see [native_common.md](native_common.md#adding-a-common-native)).
 
 ## Memory
 

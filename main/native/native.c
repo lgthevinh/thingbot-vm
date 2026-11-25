@@ -1,6 +1,6 @@
 #include "native.h"
 #include "esp_log.h"
-#include "runtime.h"
+#include "engine.h"
 #include <stdbool.h>
 
 static const char *TAG = "native";
@@ -64,10 +64,19 @@ static void native_led(engine_t *e, runtime_t *rt) {
     ESP_LOGD(TAG, "led %d brightness %d, pc %d, sp %d", id, brightness, e->pc - 2, e->sp);
 }
 
-const NativeFn thingbot_natives[NATIVE_COUNT] = {
-    [MOTOR] = native_motor,
-    [SERVO] = native_servo,
-    [SPIN] = native_spin,
-    [BUZZ] = native_buzz,
-    [LED] = native_led,
+// indexed by id - NATIVE_SPECIFIC_BASE
+static const NativeFn specific_fns[NATIVE_END - NATIVE_SPECIFIC_BASE] = {
+    [MOTOR - NATIVE_SPECIFIC_BASE] = native_motor,
+    [SERVO - NATIVE_SPECIFIC_BASE] = native_servo,
+    [SPIN - NATIVE_SPECIFIC_BASE] = native_spin,
+    [BUZZ - NATIVE_SPECIFIC_BASE] = native_buzz,
+    [LED - NATIVE_SPECIFIC_BASE] = native_led,
+};
+
+// no common natives yet
+const native_table_t thingbot_common = {0};
+
+const native_table_t thingbot_specific = {
+    .fns = specific_fns,
+    .count = NATIVE_END - NATIVE_SPECIFIC_BASE,
 };
