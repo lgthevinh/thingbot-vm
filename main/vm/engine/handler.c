@@ -218,6 +218,60 @@ static void op_wait(engine_t *e, const int *prog) {
     ESP_LOGD(TAG, "wait %d ms, pc %d, sp %d", ms, e->pc - 1, e->sp);
 }
 
+static void op_mload8(engine_t *e, const int *prog) {
+    int addr = engine_pop(e);
+    uint8_t *p = engine_mem(e, addr, 1);
+    if (p == NULL) {
+        return;
+    }
+    engine_push(e, p[0]);
+
+    ESP_LOGD(TAG, "mload8 [%d] = %d, pc %d, sp %d", addr, p[0], e->pc - 1, e->sp);
+}
+
+static void op_mstore8(engine_t *e, const int *prog) {
+    int byte = engine_pop(e);
+    int addr = engine_pop(e);
+    uint8_t *p = engine_mem(e, addr, 1);
+    if (p == NULL) {
+        return;
+    }
+    p[0] = (uint8_t)byte;
+
+    ESP_LOGD(TAG, "mstore8 [%d] = %d, pc %d, sp %d", addr, p[0], e->pc - 1, e->sp);
+}
+
+static void op_mload32(engine_t *e, const int *prog) {
+    int addr = engine_pop(e);
+    uint8_t *p = engine_mem(e, addr, 4);
+    if (p == NULL) {
+        return;
+    }
+
+    // assemble little-endian byte by byte, since addresses need no alignment
+    uint32_t w = (uint32_t)p[0] | (uint32_t)p[1] << 8 | (uint32_t)p[2] << 16 | (uint32_t)p[3] << 24;
+    engine_push(e, (int)w);
+
+    ESP_LOGD(TAG, "mload32 [%d] = %d, pc %d, sp %d", addr, (int)w, e->pc - 1, e->sp);
+}
+
+static void op_mstore32(engine_t *e, const int *prog) {
+    int word = engine_pop(e);
+    int addr = engine_pop(e);
+    uint8_t *p = engine_mem(e, addr, 4);
+    if (p == NULL) {
+        return;
+    }
+
+    uint32_t w = (uint32_t)word;
+    p[0] = (uint8_t)w;
+    p[1] = (uint8_t)(w >> 8);
+    p[2] = (uint8_t)(w >> 16);
+    p[3] = (uint8_t)(w >> 24);
+
+    ESP_LOGD(TAG, "mstore32 [%d] = %d, pc %d, sp %d", addr, word, e->pc - 1, e->sp);
+}
+
 static void op_invoke_static(engine_t *e, const int *prog) {
     ESP_LOGE(TAG, "invoke static not implemented, pc %d", e->pc - 1);
     e->status = ENGINE_HALTED;
@@ -245,4 +299,8 @@ const OpHandler op_handlers[OP_COUNT] = {
     [RET] = op_ret,
     [WAIT] = op_wait,
     [INVOKE_STATIC] = op_invoke_static,
+    [MLOAD8] = op_mload8,
+    [MSTORE8] = op_mstore8,
+    [MLOAD32] = op_mload32,
+    [MSTORE32] = op_mstore32,
 };

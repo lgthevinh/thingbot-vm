@@ -24,6 +24,10 @@ typedef enum {
     WAIT,
     INVOKE_STATIC,
     INVOKE_NATIVE,
+    MLOAD8,
+    MSTORE8,
+    MLOAD32,
+    MSTORE32,
 
     // len on vm opcode
     OP_COUNT,

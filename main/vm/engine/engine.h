@@ -1,10 +1,12 @@
 #pragma once
 
 #include "runtime.h"
+#include <stdint.h>
 
-#define VM_GLOBAL_SLOT 16 // global slots
-#define VM_STACK_LEN 256  // operand stack slots
-#define VM_CALL_DEPTH 8   // maximum nested calls
+#define VM_GLOBAL_SLOT 256 // global slots, 1 KB
+#define VM_STACK_LEN 256   // operand stack slots
+#define VM_CALL_DEPTH 8    // maximum nested calls
+#define VM_MEM_LEN 4096    // linear memory bytes
 
 typedef enum {
     ENGINE_HALTED,  // stopped by HLT or an error
@@ -22,11 +24,15 @@ struct engine_t {
     int call_stack[VM_CALL_DEPTH]; // return addresses
 
     int global[VM_GLOBAL_SLOT];    // shared by the whole program, kept between programs
+    uint8_t mem[VM_MEM_LEN];       // linear memory, little-endian words, cleared on load
     EngineStatus status;
     int wait_ms;                   // pause requested by the last WAIT
 };
 
 void engine_reset(engine_t *e);
+
+// Bounds-checked pointer to mem[ptr .. ptr + len - 1], halts the engine and returns NULL when out of range
+uint8_t *engine_mem(engine_t *e, int ptr, int len);
 void engine_step(engine_t *e, const int *prog, const native_table_t *common, const native_table_t *specific, runtime_t *rt);
 
 static inline int engine_fetch(engine_t *e, const int *prog) {

@@ -1,6 +1,6 @@
 # ThingBot Native Specification
 
-ThingBot natives that drive the actuators on the PCA9685, called with [`INVOKE_NATIVE id`](opcode.md#invoke_native). They are all runtime-specific, so their ids start at `0x8000` (see [native_common.md](native_common.md#id-ranges)), and a program that uses them sets `target_runtime` to `1`, ThingBot's runtime id (see [vm.md](vm.md#runtime-ids)); ThingBot has no common natives yet. They follow the conventions in [opcode.md](opcode.md). Native ids are defined by `NativeId` in `main/native/native.h`, implemented in `main/native/native.c`, and reach the hardware through the `act_*` functions in `main/native/board/act.c` via the runtime (`rt->act`, see [vm.md](vm.md#runtime)). `main` registers the tables with `vm_init(&vm, &runtime, &thingbot_common, &thingbot_specific)`.
+ThingBot natives that drive the actuators on the PCA9685, called with [`INVOKE_NATIVE id`](opcode.md#invoke_native). They are all runtime-specific, so their ids start at `0x8000` (see [native_common.md](native_common.md#id-ranges)); ThingBot has no common natives yet. They follow the conventions in [opcode.md](opcode.md). Native ids are defined by `NativeId` in `main/native/native.h`, implemented in `main/native/native.c`, and reach the hardware through the `act_*` functions in `main/native/board/act.c` via the runtime (`rt->act`, see [vm.md](vm.md#runtime)). `main` registers the tables with `vm_init(&vm, &runtime, &thingbot_common, &thingbot_specific)`.
 
 ## Table of Contents
 

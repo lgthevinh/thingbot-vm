@@ -30,7 +30,7 @@ Thingcode is the bytecode run by the stack-based VM. Opcodes are defined in `mai
 
 ## Conventions
 
-- A Thingcode program is an array of `int`: a header, a data section, then the code (see [vm.md](vm.md#thingcode-program)). In the code, each opcode occupies one slot; its operand (if any) occupies the next slot. `pc` and jump targets index the code, not the whole array.
+- A Thingcode program is an array of `int`. Each opcode occupies one slot; its operand (if any) occupies the next slot.
 - Stack effect notation: `( before -- after )`, top of stack on the right.
 - For binary operators, `a` is the value pushed first and `b` is the value pushed last (top of stack).
 - Comparison results are `1` (true) or `0` (false).
@@ -234,7 +234,7 @@ Pauses the program.
 
 ## Memory
 
-Linear memory is a byte array of `VM_MEM_LEN` (4096) bytes in the engine. `vm_load` clears it to zero and copies the program's data section to the start (see [vm.md](vm.md#linear-memory)). Constant data such as names and UUIDs goes in the data section, not in the code. Natives read and write buffers in it as `ptr len` pairs.
+Linear memory is a byte array of `VM_MEM_LEN` (4096) bytes in the engine, cleared to zero by `vm_load` (see [vm.md](vm.md#linear-memory)). Natives read and write buffers in it as `ptr len` pairs.
 
 - Words are 32-bit little-endian: the low byte is at the lowest address.
 - Addresses need no alignment.
@@ -304,6 +304,5 @@ The VM does not return `Error` codes yet. On the conditions below it logs an err
 | Not implemented      | `INVOKE_STATIC`                                                 |
 | Bad native id        | `INVOKE_NATIVE` with `id` not in the native tables              |
 | Bad memory access    | `MLOAD*` / `MSTORE*` outside `0 .. VM_MEM_LEN - 1`              |
-| Pc out of range      | Fetching past the end of the code                               |
 
 Operand stack overflow/underflow and out-of-range jump/call targets are **not** checked, so `STACK_OVERFLOW` is never raised.

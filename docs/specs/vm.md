@@ -10,7 +10,6 @@ Stack-based VM that runs Thingcode programs on ThingBot (ESP32-C3). It is split 
   - [Runtime](#runtime)
   - [Word](#word)
   - [Thingcode program](#thingcode-program)
-  - [Runtime ids](#runtime-ids)
   - [Registers](#registers)
   - [Operand stack](#operand-stack)
   - [Globals](#globals)
@@ -35,24 +34,22 @@ Stack-based VM that runs Thingcode programs on ThingBot (ESP32-C3). It is split 
 ## Architecture
 
 ```
-vm_t ──owns──▶ code, engine_t
+vm_t ──owns──▶ prog, engine_t
   │
   ├──points to──▶ common, specific native tables
   └──points to──▶ runtime_t (board)
 
-vm_run ──▶ engine_step(engine, code, code_len, common, specific, runtime)
+vm_run ──▶ engine_step(engine, prog, common, specific, runtime)
                 └─ INVOKE_NATIVE id ──▶ fn(engine, runtime)
 ```
 
 ### Vm
 
-`vm_t` (`vm/vm.h`) is the facade. It holds the loaded code and the engine, points to the two native tables, and to the runtime. It exposes `vm_init`, `vm_load` and `vm_run`, and passes the runtime to the engine on every step.
+`vm_t` (`vm/vm.h`) is the facade. It holds the program and the engine, points to the two native tables, and to the runtime. It exposes `vm_init`, `vm_load` and `vm_run`, and passes the runtime to the engine on every step.
 
 ```c
 typedef struct {
-    const int *code;                // code section of the loaded program
-    int code_len;                   // slots in code
-    int runtime_id;                 // checked against each program's target_runtime
+    const int *prog;                // program being run
     const native_table_t *common;   // natives every runtime provides, ids below NATIVE_SPECIFIC_BASE
     const native_table_t *specific; // natives of this runtime only, ids from NATIVE_SPECIFIC_BASE
     engine_t engine;
@@ -83,7 +80,7 @@ struct engine_t {
 | Constant         | Value | Meaning              |
 |------------------|------:|----------------------|
 | `VM_STACK_LEN`   | 256   | Operand stack slots  |
-| `VM_GLOBAL_SLOT` | 16    | Global slots         |
+| `VM_GLOBAL_SLOT` | 256   | Global slots, 1 KB   |
 | `VM_CALL_DEPTH`  | 8     | Maximum nested calls |
 | `VM_MEM_LEN`     | 4096  | Linear memory bytes  |
 
@@ -112,44 +109,16 @@ The only data type is the C `int`, which is 32-bit signed on the ESP32-C3. Progr
 
 ### Thingcode program
 
-A Thingcode program is a `const int` array of `len` slots: a header, a data section, then the code.
-
-| Slot           | Field            | Meaning                                                                     |
-|----------------|------------------|-----------------------------------------------------------------------------|
-| 0              | `magic`          | `THINGCODE_MAGIC`, `0x444F4354`: the bytes `TCOD` when stored little-endian |
-| 1              | `version`        | `THINGCODE_VERSION`, `1`                                                    |
-| 2              | `target_runtime` | Runtime the program needs, `0` for any (see [Runtime ids](#runtime-ids))    |
-| 3              | `data_bytes`     | Size of the data section in bytes, `0 .. VM_MEM_LEN`                        |
-| 4 .. 4 + W - 1 | data             | `W = ceil(data_bytes / 4)` words, copied to `mem[0 .. data_bytes - 1]`      |
-| 4 + W ..       | code             | Instructions, up to `len - 1`                                               |
-
-- Data words are little-endian: the low byte of the first word goes to `mem[0]`. Padding bytes in the last word are ignored.
-- Each opcode takes one slot, and its operand, if it has one, takes the next slot. Every instruction is one or two slots.
-- `pc`, jump and call targets are slot indices **into the code**: `0` is the first code slot, so the header and data do not shift them.
+A Thingcode program is a `const int` array, addressed by slot index. Each opcode takes one slot, and its operand, if it has one, takes the next slot. There is no header and no length, so a program ends where its `HLT` is executed. Jump and call targets are slot indices.
 
 ```c
 const int prog[] = {
-    THINGCODE_MAGIC, THINGCODE_VERSION,
-    RUNTIME_ANY,               // target_runtime
-    8,                         // data_bytes
-    0x6E696854, 0x746F4267,    // "ThingBot", copied to mem[0..7]
-    PSH, 2,                    // code slot 0-1
-    PSH, 3,                    // code slot 2-3
-    ADD,                       // code slot 4
-    HLT,                       // code slot 5
+    PSH, 2,   // slot 0-1
+    PSH, 3,   // slot 2-3
+    ADD,      // slot 4
+    HLT,      // slot 5
 };
 ```
-
-### Runtime ids
-
-`target_runtime` names the runtime whose specific natives (`0x8000 .. 0xFFFF`) the program uses. `vm_load` rejects a program whose `target_runtime` is neither `0` nor the id the runtime registered with `vm_init`, so a program is never run against another runtime's natives.
-
-| Id  | Runtime       | Meaning                                                          |
-|----:|---------------|------------------------------------------------------------------|
-| `0` | `RUNTIME_ANY` | Uses common natives only, runs on any runtime                    |
-| `1` | ThingBot      | Uses ThingBot natives ([native_thingbot.md](native_thingbot.md)) |
-
-New runtimes take the next free id.
 
 ### Registers
 
@@ -169,7 +138,7 @@ Held by the engine.
 
 ### Globals
 
-`global` is a single flat array of 16 slots, accessed by index with `GLOAD` and `GSTORE`. The index is bounds-checked.
+`global` is a single flat array of 256 slots (1 KB), accessed by index with `GLOAD` and `GSTORE`. The index is bounds-checked.
 
 - **Global to the program:** there are no per-call frames, so a callee writing `global[idx]` overwrites the caller's value.
 - **Cleared on load:** `vm_load` sets every slot to `0`.
@@ -183,7 +152,7 @@ Held by the engine.
 
 `mem` is a byte array of `VM_MEM_LEN` (4096) bytes, the WASM model: flat, with no paging or address translation. Every access is bounds-checked, so a program cannot reach anything outside it.
 
-- Programs access it with `MLOAD8`, `MSTORE8`, `MLOAD32` and `MSTORE32` (see [opcode.md](opcode.md#memory)). Constant data, such as names and UUIDs, comes from the program's data section, copied in by `vm_load`.
+- Programs access it with `MLOAD8`, `MSTORE8`, `MLOAD32` and `MSTORE32` (see [opcode.md](opcode.md#memory)). Constant data, such as names and UUIDs, is written with the same opcodes.
 - Natives get buffers from it as `ptr len` pairs, through `engine_mem`:
 
   ```c
@@ -192,7 +161,7 @@ Held by the engine.
 
   It returns a pointer to `mem[ptr]` when `ptr .. ptr + len - 1` fits in memory and `len >= 0`. Otherwise it logs `bad memory access`, halts the engine and returns `NULL`.
 - Words are 32-bit little-endian, and addresses need no alignment.
-- **Cleared on load:** `vm_load` sets every byte to `0`, then copies the data section to the start, so a program never sees the previous program's buffers.
+- **Cleared on load:** `vm_load` sets every byte to `0`, so a program never sees the previous program's buffers.
 ## Source layout
 
 ```
@@ -227,10 +196,8 @@ Nothing in `vm/` includes a `native/`, ESP-IDF driver or FreeRTOS header; the de
 static runtime_t runtime;
 static vm_t vm;
 
-vm_init(&vm, &runtime, RUNTIME_THINGBOT, &thingbot_common, &thingbot_specific);
-if (!vm_load(&vm, prog, sizeof(prog) / sizeof(prog[0]))) {
-    return; // not a valid program for this runtime
-}
+vm_init(&vm, &runtime, &thingbot_common, &thingbot_specific);
+vm_load(&vm, prog);
 
 while (vm_run(&vm) == ENGINE_WAITING) {
     vTaskDelay(pdMS_TO_TICKS(vm.engine.wait_ms));
@@ -239,26 +206,18 @@ while (vm_run(&vm) == ENGINE_WAITING) {
 
 ### vm_init
 
-`void vm_init(vm_t *vm, runtime_t *runtime, int runtime_id, const native_table_t *common, const native_table_t *specific)`
+`void vm_init(vm_t *vm, runtime_t *runtime, const native_table_t *common, const native_table_t *specific)`
 
-Stores the runtime, its id (see [Runtime ids](#runtime-ids)) and its two native tables (see [Natives](#natives)). Called once before the first load.
+Stores the runtime and its two native tables (see [Natives](#natives)). Called once before the first load.
 
 ### vm_load
 
-`bool vm_load(vm_t *vm, const int *prog, int len)`
+`void vm_load(vm_t *vm, const int *prog)`
 
-Checks the header and loads the program. It returns `false`, logs why and leaves the engine halted when:
-
-- `len` is shorter than the header and data section, or leaves no code
-- `magic` or `version` does not match
-- `target_runtime` is neither `0` nor the runtime's id
-- `data_bytes` is outside `0 .. VM_MEM_LEN`
-
-Otherwise it returns `true` after a fresh start:
+Sets `prog` and resets the engine to a fresh start:
 
 - `pc = 0`, `sp = -1`, `call_sp = -1`, `status = ENGINE_RUNNING`
 - every slot of `global` and every byte of `mem` is set to `0`
-- the data section is copied to the start of `mem`
 - the runtime and the native tables are kept.
 
 The same `vm_t` can load and run several programs one after another.
@@ -280,12 +239,11 @@ The engine never sleeps itself, so how to pause is up to the caller. On ThingBot
 vm_run:
     while status == RUNNING:
         engine_step:
-            if pc >= code_len: halt
-            opcode = code[pc++]
+            opcode = prog[pc++]
             dispatch(opcode)
 ```
 
-- Handlers that take an operand fetch it with `engine_fetch`, which also advances `pc`. Every fetch is checked against `code_len`, so running past the end of the code halts instead of reading past the program.
+- Handlers that take an operand fetch it with `engine_fetch`, which also advances `pc`.
 - After a handler returns, `pc` points at the next instruction unless the handler changed it (`JMP`, `JNZ`, `CALL`, `RET`).
 - Log lines report `pc` as the index of the instruction being executed: `pc - 1` for opcodes without an operand, `pc - 2` for opcodes with one.
 
@@ -380,13 +338,13 @@ Stack overflow checking is off (`CONFIG_STACK_CHECK_NONE`). To measure at runtim
 
 ### VM footprint
 
-`vm_t`, including its `engine_t`, is about 5.2 KB on the ESP32-C3:
+`vm_t`, including its `engine_t`, is about 6.2 KB on the ESP32-C3:
 
 | Part         | Size   |
 |--------------|-------:|
 | `mem`        | 4096 B |
 | `stack`      | 1024 B |
-| `global`     | 64 B   |
+| `global`     | 1024 B |
 | `call_stack` | 32 B   |
 | Other fields | ~36 B  |
 
@@ -406,7 +364,6 @@ The engine stops when `status` becomes `ENGINE_HALTED`. It halts normally on `HL
 | Not implemented      | `INVOKE_STATIC`                         |
 | Bad native id        | `INVOKE_NATIVE`                         |
 | Bad memory access    | `MLOAD*`, `MSTORE*`, `engine_mem`       |
-| Pc out of range      | `engine_step`, fetching past `code_len` |
 
 `vm_run` returns `ENGINE_HALTED` in both cases, so the caller cannot tell a normal halt from an error. The `Error` enum in `error.h` is reserved for this and is not used yet.
 
@@ -415,6 +372,7 @@ The engine stops when `status` becomes `ENGINE_HALTED`. It halts normally on `HL
 These are not checked and lead to undefined behaviour:
 
 - **Operand stack overflow/underflow:** pushing more than `VM_STACK_LEN` values, or popping from an empty stack.
+- **Running past the end of the program:** a path that does not end with `HLT`.
 - **Out-of-range jump/call targets:** `JMP`, `JNZ` and `CALL` set `pc` to any value.
 
 Other behaviour to be aware of:

@@ -1,9 +1,9 @@
 # Connectivity Native Specification
 
-**Draft.** Common natives for networking and wireless, in the connectivity range `0x1000 .. 0x1FFF` (see [native_common.md](native_common.md#id-ranges)). They are not implemented yet, and they depend on two VM features that are not implemented yet:
+**Draft.** Common natives for networking and wireless, in the connectivity range `0x1000 .. 0x1FFF` (see [native_common.md](native_common.md#id-ranges)). They are not implemented yet. They depend on:
 
-- **Linear memory:** specified, buffers point into it (see [Buffers](#buffers)).
-- **Module lookup:** the current lookup cannot register natives at `0x1000` (see [native_common.md](native_common.md#modules)).
+- **Linear memory:** implemented, buffers point into it (see [Buffers](#buffers)).
+- **Module lookup:** not implemented yet; the current lookup cannot register natives at `0x1000` (see [native_common.md](native_common.md#modules)).
 
 Each module is optional. A runtime without the hardware does not register it, and calling its natives halts with `bad native id`.
 
@@ -66,7 +66,7 @@ Handles have one of two owners:
 
 Data is passed as a `ptr len` pair: a byte range `ptr .. ptr + len - 1` in the engine's linear memory. A native reads from it or writes into it. Strings, such as a BLE device name, are UTF-8 bytes in a buffer with no terminator.
 
-Linear memory is `VM_MEM_LEN` (4096) bytes, cleared on every `vm_load` (see [vm.md](vm.md#linear-memory)). A program fills it with `MSTORE8` / `MSTORE32` (see [opcode.md](opcode.md#memory)). Constants such as names and UUIDs go in the program's data section, which `vm_load` copies to the start of memory (see [vm.md](vm.md#thingcode-program)). An out-of-range `ptr len` halts the VM.
+Linear memory is `VM_MEM_LEN` (4096) bytes, cleared on every `vm_load` (see [vm.md](vm.md#linear-memory)). A program fills it with `MSTORE8` / `MSTORE32` (see [opcode.md](opcode.md#memory)), including constants such as names and UUIDs. An out-of-range `ptr len` halts the VM.
 
 ### Addresses
 
@@ -134,3 +134,4 @@ Module `0x12`, ids `0x1200 .. 0x12FF`. Peripheral role only: the robot advertise
 3. **Network join:** whether Wi-Fi setup stays runtime configuration or becomes its own module.
 4. **Hostnames:** a DNS native, taking the name as a buffer.
 5. **BLE scope:** central role, and 16-bit UUIDs to avoid a buffer for standard services.
+6. **Constant data:** names and UUIDs are written into memory with one `MSTORE32` per word today. A cheaper way to load constants, such as a data section, is not decided.
