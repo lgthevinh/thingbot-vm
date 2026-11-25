@@ -1,6 +1,6 @@
 # Virtual machine Specifications
 
-Stack-based VM running on ThingBot (ESP32-C3). The core (`vm.c`) has no hardware dependencies; board-specific code lives in `main/board/` and reaches the board opcode handlers through a context pointer. Opcode semantics are specified in [opcode_common.md](opcode_common.md).
+Stack-based VM running on ThingBot (ESP32-C3). The core (`vm/`) has no hardware dependencies; board-specific code lives in `main/board/` as natives, called with `INVOKE_NATIVE` through a table and a context pointer registered with `vm_init`. Opcode semantics are specified in [opcode_common.md](opcode_common.md).
 
 ## Table of Contents
 
@@ -18,6 +18,7 @@ Stack-based VM running on ThingBot (ESP32-C3). The core (`vm.c`) has no hardware
 - [Execution loop](#execution-loop)
 - [Dispatch](#dispatch)
 - [Board context](#board-context)
+- [Natives](#natives)
 - [Memory](#memory)
   - [ESP32-C3](#esp32-c3)
   - [VM footprint](#vm-footprint)
@@ -39,6 +40,8 @@ typedef struct {
     int local[VM_LOCAL_SLOT];      // local slots
     bool running;                  // run loop continues while true
     void *ctx;                     // board context
+    const NativeFn *natives;       // board functions, indexed by INVOKE_NATIVE id
+    int native_count;              // number of entries in natives
 } vm_t;
 ```
 
@@ -67,17 +70,18 @@ const int prog[] = {
 
 ### Registers
 
-| Register  | Holds                                                      |
-|-----------|------------------------------------------------------------|
-| `ip`      | Index of the next slot to fetch                            |
-| `sp`      | Index of the operand stack top, `-1` when empty            |
-| `call_sp` | Index of the call stack top, `-1` when empty               |
-| `running` | Run loop continues while `true`, cleared by `HLT` or error |
-| `ctx`     | Board context, never read by the core (see [Board context](#board-context)) |
+| Register                  | Holds                                                                       |
+|---------------------------|-----------------------------------------------------------------------------|
+| `ip`                      | Index of the next slot to fetch                                             |
+| `sp`                      | Index of the operand stack top, `-1` when empty                             |
+| `call_sp`                 | Index of the call stack top, `-1` when empty                                |
+| `running`                 | Run loop continues while `true`, cleared by `HLT` or error                  |
+| `ctx`                     | Board context, never read by the core (see [Board context](#board-context)) |
+| `natives`, `native_count` | Native table for `INVOKE_NATIVE` (see [Natives](#natives))                  |
 
 ### Operand stack
 
-`stack` holds the values that opcodes work on. It grows upward: a push writes `stack[++sp]` and a pop reads `stack[sp--]`. Arithmetic, comparison and board opcodes pop their inputs and push their result. Bounds are not checked (see [Limitations](#limitations)).
+`stack` holds the values that opcodes work on. It grows upward: a push writes `stack[++sp]` and a pop reads `stack[sp--]`. Arithmetic, comparison opcodes and natives pop their inputs and push their result. Bounds are not checked (see [Limitations](#limitations)).
 
 ### Locals
 
@@ -99,10 +103,11 @@ const int prog[] = {
 | `vm/handler.h/.c`      | One handler per opcode and the `op_handlers` dispatch table     |
 | `vm/error.h`           | `Error` enum (not used yet)                                     |
 | `board/thingbot.h`     | `thingbot_t` board context                                      |
+| `board/native.h/.c`    | ThingBot natives, `NativeId` and the `thingbot_natives` table   |
 | `board/io.h/.c`        | I2C bus, SPI host and GPIO pin masks                            |
 | `board/act.h/.c`       | Actuators on the PCA9685                                        |
 
-`vm.c` includes no ESP-IDF driver headers. `handler.c` includes `thingbot.h` for the board opcodes, so it depends on `board` and its drivers. Only `vm.c` and `handler.c` use `esp_log.h` for logging.
+Nothing in `vm/` includes a `board/` header or an ESP-IDF driver header; the dependency runs one way, from `native.c` to `vm.h`. `vm.c`, `handler.c` and `native.c` use `esp_log.h` for logging.
 
 ## Lifecycle
 
@@ -110,15 +115,15 @@ const int prog[] = {
 static thingbot_t bot;
 static vm_t vm;
 
-vm_init(&vm, &bot);
+vm_init(&vm, &bot, thingbot_natives, NATIVE_COUNT);
 vm_run(&vm, prog);
 ```
 
 ### vm_init
 
-`void vm_init(vm_t *vm, void *ctx)`
+`void vm_init(vm_t *vm, void *ctx, const NativeFn *natives, int native_count)`
 
-Stores the board context. Called once before the first run.
+Stores the board context and the native table. Called once before the first run.
 
 ### vm_run
 
@@ -127,7 +132,7 @@ Stores the board context. Called once before the first run.
 Resets the VM and runs `prog` until it halts:
 
 - `prog = prog`, `ip = 0`, `sp = -1`, `call_sp = -1`, `running = true`
-- `local` and `ctx` are kept.
+- `local`, `ctx` and the native table are kept.
 
 `vm_run` blocks until the program halts. The same `vm_t` can run several programs one after another.
 
@@ -159,7 +164,9 @@ Adding an opcode:
 1. Add it to `OpCode` before `OP_COUNT`.
 2. Write `static void op_<name>(vm_t *vm)` in `handler.c`.
 3. Add `[<NAME>] = op_<name>` to `op_handlers`.
-4. Document it in [opcode_common.md](opcode_common.md), or [opcode_board.md](opcode_board.md) for board opcodes.
+4. Document it in [opcode_common.md](opcode_common.md).
+
+Board functions are added as natives instead (see [Natives](#natives)).
 
 ## Board context
 
@@ -172,13 +179,32 @@ typedef struct {
 } thingbot_t;
 ```
 
-Handlers that need hardware cast it back:
+Natives that need hardware cast it back:
 
 ```c
 thingbot_t *bot = vm->ctx;
 ```
 
 `main` creates the buses, initializes `io` and `act`, and passes `&bot` to `vm_init`. The VM never creates or frees hardware resources.
+
+## Natives
+
+A native is a board function with the same shape as an opcode handler:
+
+```c
+typedef void (*NativeFn)(vm_t *vm);
+```
+
+`INVOKE_NATIVE id` fetches `id`, checks `0 <= id < native_count` and that `natives[id]` is not `NULL`, then calls it. Otherwise it logs `bad native id` and halts. A native pops its own arguments, reaches hardware through `vm->ctx`, and halts by setting `running = false` on error.
+
+The table belongs to the board. On ThingBot it is `thingbot_natives`, indexed by `NativeId` in `board/native.h`, and sized `NATIVE_COUNT`. Ids are listed in [opcode_board.md](opcode_board.md). Another board registers its own table, so the same opcodes run on any board, and only the native ids differ.
+
+Adding a native:
+
+1. Add it to `NativeId` before `NATIVE_COUNT`.
+2. Write `static void native_<name>(vm_t *vm)` in `native.c`.
+3. Add `[<NAME>] = native_<name>` to `thingbot_natives`.
+4. Document it in [opcode_board.md](opcode_board.md).
 
 ## Memory
 
@@ -215,7 +241,7 @@ Stack overflow checking is off (`CONFIG_STACK_CHECK_NONE`). To measure at runtim
 | `stack`      | 1024 B     |
 | `local`      | 64 B       |
 | `call_stack` | 32 B       |
-| Other fields | ~24 B      |
+| Other fields | ~32 B      |
 
 The `app_main` task stack is 3584 B (`CONFIG_ESP_MAIN_TASK_STACK_SIZE`), so `vm_t` and `thingbot_t` are declared `static` in `main.c`.
 
@@ -229,6 +255,8 @@ The VM stops when `running` becomes `false`. It halts normally on `HLT`, and on 
 | Bad local index      | `LOAD`, `STORE` |
 | Call stack overflow  | `CALL`          |
 | Call stack underflow | `RET`           |
+| Not implemented      | `INVOKE`        |
+| Bad native id        | `INVOKE_NATIVE` |
 
 `vm_run` returns nothing, so the caller cannot tell a normal halt from an error. The `Error` enum in `error.h` is reserved for this and is not used yet.
 

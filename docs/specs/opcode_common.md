@@ -1,6 +1,6 @@
 # Opcode Specification
 
-Stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `main/vm/vm.c` to the handlers in `main/vm/handler.c`. Error codes are defined in `main/vm/error.h`. ThingBot-specific opcodes are specified in [opcode_board.md](opcode_board.md).
+Stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `main/vm/vm.c` to the handlers in `main/vm/handler.c`. Error codes are defined in `main/vm/error.h`. Board functions reached through `INVOKE_NATIVE` are specified in [opcode_board.md](opcode_board.md).
 
 ## Table of Contents
 
@@ -19,7 +19,7 @@ Stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `mai
 - [Branching](#branching)
   - [JMP](#jmp), [JNZ](#jnz)
 - [Calls](#calls)
-  - [CALL](#call), [RET](#ret)
+  - [CALL](#call), [RET](#ret), [INVOKE](#invoke), [INVOKE_NATIVE](#invoke_native)
 - [Timing](#timing)
   - [WAIT](#wait)
 - [Errors](#errors)
@@ -37,26 +37,28 @@ Stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `mai
 
 ## Opcode Summary
 
-| Value | Mnemonic  | Category   | Operand        | Stack effect        | Status      |
-|------:|-----------|------------|----------------|---------------------|-------------|
-| 0     | `HLT`     | Control    | -              | `( -- )`            | Implemented |
-| 1     | `PSH`     | Stack      | `value`        | `( -- value )`      | Implemented |
-| 2     | `ADD`     | Arithmetic | -              | `( a b -- a+b )`    | Implemented |
-| 3     | `SUB`     | Arithmetic | -              | `( a b -- a-b )`    | Implemented |
-| 4     | `MUL`     | Arithmetic | -              | `( a b -- a*b )`    | Implemented |
-| 5     | `LOAD`    | Locals     | `idx`          | `( -- local[idx] )` | Implemented |
-| 6     | `STORE`   | Locals     | `idx`          | `( v -- )`          | Implemented |
-| 7     | `JMP`     | Branching  | `target_ip`    | `( -- )`            | Implemented |
-| 8     | `JNZ`     | Branching  | `target_ip`    | `( cond -- )`       | Implemented |
-| 9     | `GT`      | Comparison | -              | `( a b -- a>b )`    | Implemented |
-| 10    | `GTE`     | Comparison | -              | `( a b -- a>=b )`   | Implemented |
-| 11    | `LT`      | Comparison | -              | `( a b -- a<b )`    | Implemented |
-| 12    | `LTE`     | Comparison | -              | `( a b -- a<=b )`   | Implemented |
-| 13    | `EQ`      | Comparison | -              | `( a b -- a==b )`   | Implemented |
-| 14    | `NEQ`     | Comparison | -              | `( a b -- a!=b )`   | Implemented |
-| 15    | `CALL`    | Calls      | `target_ip`    | `( -- )`            | Implemented |
-| 16    | `RET`     | Calls      | -              | `( -- )`            | Implemented |
-| 17    | `WAIT`    | Timing     | -              | `( ms -- )`         | Implemented |
+| Value | Mnemonic        | Category   | Operand     | Stack effect        |
+|------:|-----------------|------------|-------------|---------------------|
+| 0     | `HLT`           | Control    | -           | `( -- )`            |
+| 1     | `PSH`           | Stack      | `value`     | `( -- value )`      |
+| 2     | `ADD`           | Arithmetic | -           | `( a b -- a+b )`    |
+| 3     | `SUB`           | Arithmetic | -           | `( a b -- a-b )`    |
+| 4     | `MUL`           | Arithmetic | -           | `( a b -- a*b )`    |
+| 5     | `LOAD`          | Locals     | `idx`       | `( -- local[idx] )` |
+| 6     | `STORE`         | Locals     | `idx`       | `( v -- )`          |
+| 7     | `JMP`           | Branching  | `target_ip` | `( -- )`            |
+| 8     | `JNZ`           | Branching  | `target_ip` | `( cond -- )`       |
+| 9     | `GT`            | Comparison | -           | `( a b -- a>b )`    |
+| 10    | `GTE`           | Comparison | -           | `( a b -- a>=b )`   |
+| 11    | `LT`            | Comparison | -           | `( a b -- a<b )`    |
+| 12    | `LTE`           | Comparison | -           | `( a b -- a<=b )`   |
+| 13    | `EQ`            | Comparison | -           | `( a b -- a==b )`   |
+| 14    | `NEQ`           | Comparison | -           | `( a b -- a!=b )`   |
+| 15    | `CALL`          | Calls      | `target_ip` | `( -- )`            |
+| 16    | `RET`           | Calls      | -           | `( -- )`            |
+| 17    | `WAIT`          | Timing     | -           | `( ms -- )`         |
+| 18    | `INVOKE`        | Calls      | -           | -                   |
+| 19    | `INVOKE_NATIVE` | Calls      | `id`        | `( args -- )`       |
 
 ## Control
 
@@ -178,6 +180,22 @@ Returns from a subroutine.
 - Pops the return address from the call stack into `ip`.
 - Error: `RET` with an empty call stack halts the VM.
 
+### INVOKE
+
+Reserved, not implemented yet.
+
+- Error: executing `INVOKE` logs `invoke not implemented` and halts the VM.
+
+### INVOKE_NATIVE
+
+Calls a board function from the native table registered with `vm_init`.
+
+- Operand: `id`, an index into the native table
+- Stack effect: `( args -- )`, depends on the native; each native pops its own arguments
+- Does not touch the call stack.
+- Error: `id` outside `0 .. native_count - 1`, or with no entry, halts the VM.
+- Errors raised by the native itself are listed in [opcode_board.md](opcode_board.md#errors).
+
 ## Timing
 
 ### WAIT
@@ -197,7 +215,7 @@ Pauses the program.
 Defined by the `Error` enum in `error.h`.
 
 | Value | Name             | Meaning                                      |
-|------:|------------------|----------------------------------------------|
+|------:|------------------|
 | 0     | `SUCCESS`        | No error (0 is reserved for success)         |
 | 1     | `INTERNAL`       | Internal implementation error of the VM      |
 | 2     | `STACK_OVERFLOW` | Stack overflow                               |
@@ -209,10 +227,12 @@ Defined by the `Error` enum in `error.h`.
 The VM does not return `Error` codes yet. On the conditions below it logs an error and halts (`running = false`):
 
 | Condition            | Trigger                                                      |
-|----------------------|--------------------------------------------------------------|
+|----------------------|
 | Bad opcode           | Opcode value outside the enum, or with no handler            |
 | Bad local index      | `LOAD` / `STORE` with `idx` outside `0 .. VM_LOCAL_SLOT - 1` |
 | Call stack overflow  | `CALL` with `VM_CALL_DEPTH` calls already active             |
 | Call stack underflow | `RET` with no active call                                    |
+| Not implemented      | `INVOKE`                                                     |
+| Bad native id        | `INVOKE_NATIVE` with `id` outside the native table           |
 
 Operand stack overflow/underflow and out-of-range jump/call targets are **not** checked, so `STACK_OVERFLOW` is never raised.

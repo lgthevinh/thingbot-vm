@@ -20,13 +20,8 @@ typedef enum {
     CALL,
     RET,
     WAIT,
-
-    // thingbot specific opcode
-    MOTOR,
-    SERVO,
-    SPIN,
-    BUZZ,
-    LED,
+    INVOKE,
+    INVOKE_NATIVE,
 
     // len on vm opcode
     OP_COUNT,

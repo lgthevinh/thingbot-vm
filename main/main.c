@@ -1,3 +1,4 @@
+#include "native.h"
 #include "opcode.h"
 #include "thingbot.h"
 #include "vm.h"
@@ -12,29 +13,29 @@ void app_main(void) {
     // clang-format off
     // beep and blink LED 1 three times
     const int prog[] = {
-        PSH, 3,    // 0:  count = 3
-        STORE, 0,  // 2:  local[0] = count
-        PSH, 1,    // 4:  loop: LED 1 on
+        PSH, 3,                        // 0:  count = 3
+        STORE, 0,                      // 2:  local[0] = count
+        PSH, 1,                        // 4:  loop: LED 1 on
         PSH, 100,
-        LED,
-        PSH, 50,   // 9:  buzzer on, 50% duty
-        BUZZ,
-        PSH, 200,  // 12: wait 200 ms
+        INVOKE_NATIVE, LED,
+        PSH, 50,                       // 10: buzzer on, 50% duty
+        INVOKE_NATIVE, BUZZ,
+        PSH, 200,                      // 14: wait 200 ms
         WAIT,
-        PSH, 1,    // 15: LED 1 off
+        PSH, 1,                        // 17: LED 1 off
         PSH, 0,
-        LED,
-        PSH, 0,    // 20: buzzer off, outputs hold their last value after HLT
-        BUZZ,
-        PSH, 200,  // 23: wait 200 ms
+        INVOKE_NATIVE, LED,
+        PSH, 0,                        // 23: buzzer off, outputs hold their last value after HLT
+        INVOKE_NATIVE, BUZZ,
+        PSH, 200,                      // 27: wait 200 ms
         WAIT,
-        LOAD, 0,   // 26: count - 1
+        LOAD, 0,                       // 30: count - 1
         PSH, 1,
         SUB,
         STORE, 0,
-        LOAD, 0,   // 33: loop while count != 0
+        LOAD, 0,                       // 37: loop while count != 0
         JNZ, 4,
-        HLT,       // 37
+        HLT,                           // 41
     };
     // clang-format on
 
@@ -56,6 +57,6 @@ void app_main(void) {
     io_set_i2c(&bot.io, i2c_bus);
     ESP_ERROR_CHECK(act_init(&bot.act, bot.io.i2c_bus));
 
-    vm_init(&vm, &bot);
+    vm_init(&vm, &bot, thingbot_natives, NATIVE_COUNT);
     vm_run(&vm, prog);
 }

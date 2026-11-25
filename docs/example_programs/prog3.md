@@ -32,56 +32,56 @@ def stop():
 ```c
 // clang-format off
 const int prog[] = {
-    PSH, 1,      // 0:  M1 forward at 60%
+    PSH, 1,                        // 0:  M1 forward at 60%
     PSH, 60,
-    MOTOR,
-    PSH, 2,      // 5:  M2 forward at 60%
+    INVOKE_NATIVE, MOTOR,
+    PSH, 2,                        // 6:  M2 forward at 60%
     PSH, 60,
-    MOTOR,
-    PSH, 1000,   // 10: drive for 1 s
+    INVOKE_NATIVE, MOTOR,
+    PSH, 1000,                     // 12: drive for 1 s
     WAIT,
-    CALL, 56,    // 13: stop both motors
-    PSH, 0,      // 15: angle = 0
+    CALL, 62,                      // 15: stop both motors
+    PSH, 0,                        // 17: angle = 0
     STORE, 0,
-    PSH, 1,      // 19: loop: servo 1 to angle
+    PSH, 1,                        // 21: loop: servo 1 to angle
     LOAD, 0,
-    SERVO,
-    PSH, 300,    // 24: let the servo reach it
+    INVOKE_NATIVE, SERVO,
+    PSH, 300,                      // 27: let the servo reach it
     WAIT,
-    LOAD, 0,     // 27: angle += 30
+    LOAD, 0,                       // 30: angle += 30
     PSH, 30,
     ADD,
     STORE, 0,
-    LOAD, 0,     // 34: loop while angle <= 180
+    LOAD, 0,                       // 37: loop while angle <= 180
     PSH, 180,
     LTE,
-    JNZ, 19,
-    PSH, 1,      // 41: center servo 1
+    JNZ, 21,
+    PSH, 1,                        // 44: center servo 1
     PSH, 90,
-    SERVO,
-    PSH, 50,     // 46: beep 100 ms
-    BUZZ,
+    INVOKE_NATIVE, SERVO,
+    PSH, 50,                       // 50: beep 100 ms
+    INVOKE_NATIVE, BUZZ,
     PSH, 100,
     WAIT,
-    PSH, 0,      // 52: buzzer off
-    BUZZ,
-    HLT,         // 55
+    PSH, 0,                        // 57: buzzer off
+    INVOKE_NATIVE, BUZZ,
+    HLT,                           // 61
 
     // stop: both motors to 0 (coast)
-    PSH, 1,      // 56
+    PSH, 1,                        // 62
     PSH, 0,
-    MOTOR,
-    PSH, 2,      // 61
+    INVOKE_NATIVE, MOTOR,
+    PSH, 2,                        // 68
     PSH, 0,
-    MOTOR,
-    RET,         // 66
+    INVOKE_NATIVE, MOTOR,
+    RET,                           // 74
 };
 // clang-format on
 ```
 
 ## How it works
 
-- The stop routine lives after `HLT` at ip 56 and is reached only through `CALL`. `RET` returns to ip 15.
+- The stop routine lives after `HLT` at ip 62 and is reached only through `CALL`. `RET` returns to ip 17.
 - `local[0]` holds the angle. The loop runs for 0, 30, … 180 (7 positions), then exits when the angle reaches 210.
 - If a motor turns the wrong way, swap its A/B pair in `motor_ch` in `act.c`.
 
@@ -90,5 +90,5 @@ const int prog[] = {
 Not yet run on hardware. The VM should halt after about 3.2 s (1000 ms drive + 7 × 300 ms sweep + 100 ms beep):
 
 ```
-I (...) vm: halt, ip 55
+I (...) vm: halt, ip 61
 ```

@@ -1,11 +1,11 @@
-# Board Opcode Specification
+# Board Native Specification
 
-ThingBot-specific opcodes that drive the actuators on the PCA9685. They follow the conventions in [opcode_common.md](opcode_common.md). Opcodes are defined in `main/vm/opcode.h`, handled in `main/vm/handler.c`, and reach the hardware through the `act_*` functions in `main/board/act.c` via the board context (`thingbot_t *bot = vm->ctx`).
+ThingBot natives that drive the actuators on the PCA9685, called with [`INVOKE_NATIVE id`](opcode_common.md#invoke_native). They follow the conventions in [opcode_common.md](opcode_common.md). Native ids are defined by `NativeId` in `main/board/native.h`, implemented in `main/board/native.c`, and reach the hardware through the `act_*` functions in `main/board/act.c` via the board context (`thingbot_t *bot = vm->ctx`). `main` registers the table with `vm_init(&vm, &bot, thingbot_natives, NATIVE_COUNT)`.
 
 ## Table of Contents
 
 - [Conventions](#conventions)
-- [Opcode Summary](#opcode-summary)
+- [Native Summary](#native-summary)
 - [Channel Map](#channel-map)
 - [Actuators](#actuators)
   - [MOTOR](#motor), [SERVO](#servo), [SPIN](#spin), [BUZZ](#buzz), [LED](#led)
@@ -13,23 +13,23 @@ ThingBot-specific opcodes that drive the actuators on the PCA9685. They follow t
 
 ## Conventions
 
-- All arguments come from the stack; board opcodes take no inline operands. Use `PSH` to supply constants.
-- When an opcode takes an `id`, push the `id` first and the value last (value on top).
+- All arguments come from the stack; the only inline operand is the native id of `INVOKE_NATIVE`. Use `PSH` to supply constants.
+- When a native takes a device `id`, push the `id` first and the value last (value on top).
 - Device ids are 1-based and match the board labels: `id` 1 is `M1`, `SERVO_1`, `LED_1`.
 
 ```
-PSH, 1, PSH, 80, MOTOR,   // motor M1 at speed 80
+PSH, 1, PSH, 80, INVOKE_NATIVE, MOTOR,   // motor M1 at speed 80
 ```
 
-## Opcode Summary
+## Native Summary
 
-| Value | Mnemonic | Operand | Stack effect           | Range       | Calls                 | Status      |
-|------:|----------|---------|------------------------|-------------|-----------------------|-------------|
-| 18    | `MOTOR`  | -       | `( id speed -- )`      | -100 .. 100 | `act_set_motor_speed` | Implemented |
-| 19    | `SERVO`  | -       | `( id angle -- )`      | 0 .. 180    | `act_set_servo_angle` | Implemented |
-| 20    | `SPIN`   | -       | `( id speed -- )`      | -100 .. 100 | `act_set_servo_speed` | Implemented |
-| 21    | `BUZZ`   | -       | `( duty -- )`          | 0 .. 100    | `act_set_buzzer`      | Implemented |
-| 22    | `LED`    | -       | `( id brightness -- )` | 0 .. 100    | `act_set_led`         | Implemented |
+| Id | Name    | Stack effect           | Range       | Calls                 |
+|---:|---------|------------------------|-------------|-----------------------|
+| 0  | `MOTOR` | `( id speed -- )`      | -100 .. 100 | `act_set_motor_speed` |
+| 1  | `SERVO` | `( id angle -- )`      | 0 .. 180    | `act_set_servo_angle` |
+| 2  | `SPIN`  | `( id speed -- )`      | -100 .. 100 | `act_set_servo_speed` |
+| 3  | `BUZZ`  | `( duty -- )`          | 0 .. 100    | `act_set_buzzer`      |
+| 4  | `LED`   | `( id brightness -- )` | 0 .. 100    | `act_set_led`         |
 
 Values outside the range are clamped, not rejected.
 
@@ -102,9 +102,9 @@ Sets the brightness of an LED.
 
 ## Errors
 
-Board opcodes follow the halting behavior in [opcode_common.md](opcode_common.md#current-behavior). The handler logs and halts when the `act_*` call fails:
+Natives follow the halting behavior in [opcode_common.md](opcode_common.md#current-behavior). A native logs and halts when its `act_*` call fails. A native id outside the table is rejected by `INVOKE_NATIVE` before any native runs:
 
 | Condition       | Trigger                                                               |
-|-----------------|-----------------------------------------------------------------------|
+|-----------------|
 | Bad device id   | `id` outside the device range (`act_*` returns `ESP_ERR_INVALID_ARG`) |
 | Actuator failed | Any other non-`ESP_OK` return from `act_*` (e.g. I2C error)           |

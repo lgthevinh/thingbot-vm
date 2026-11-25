@@ -6,8 +6,13 @@
 #define VM_STACK_LEN 256 // operand stack slots
 #define VM_CALL_DEPTH 8  // maximum nested calls
 
+typedef struct vm_t vm_t;
+
+// Board function called by INVOKE_NATIVE, pops its arguments from the operand stack
+typedef void (*NativeFn)(vm_t *vm);
+
 // Simple stack-based VM on ThingBot (ESP32C3)
-typedef struct {
+struct vm_t {
     const int *prog;               // program being run
     int ip;                        // index of the next slot to fetch
     int sp;                        // index of the operand stack top, -1 when empty
@@ -20,9 +25,11 @@ typedef struct {
     bool running;                  // the run loop continues while true
 
     void *ctx;                     // board context, passed to vm_init, never read by the VM core
-} vm_t;
+    const NativeFn *natives;       // board functions, indexed by INVOKE_NATIVE id
+    int native_count;              // number of entries in natives
+};
 
-void vm_init(vm_t *vm, void *ctx);
+void vm_init(vm_t *vm, void *ctx, const NativeFn *natives, int native_count);
 void vm_run(vm_t *vm, const int *prog);
 
 static inline int vm_fetch(vm_t *vm) {

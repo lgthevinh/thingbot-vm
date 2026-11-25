@@ -6,8 +6,10 @@ static const char *TAG = "vm";
 
 static void vm_exec(vm_t *vm, int opcode);
 
-void vm_init(vm_t *vm, void *ctx) {
+void vm_init(vm_t *vm, void *ctx, const NativeFn *natives, int native_count) {
     vm->ctx = ctx;
+    vm->natives = natives;
+    vm->native_count = native_count;
 }
 
 void vm_run(vm_t *vm, const int *prog) {

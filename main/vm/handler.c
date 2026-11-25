@@ -2,7 +2,6 @@
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
-#include "thingbot.h"
 
 static const char *TAG = "vm";
 
@@ -12,16 +11,6 @@ static bool vm_check_local(vm_t *vm, int idx) {
     }
 
     ESP_LOGE(TAG, "bad local idx %d, ip %d", idx, vm->ip - 2);
-    vm->running = false;
-    return false;
-}
-
-static bool vm_check_act(vm_t *vm, esp_err_t err) {
-    if (err == ESP_OK) {
-        return true;
-    }
-
-    ESP_LOGE(TAG, "act failed: %s, ip %d", esp_err_to_name(err), vm->ip - 1);
     vm->running = false;
     return false;
 }
@@ -189,58 +178,21 @@ static void op_wait(vm_t *vm) {
     vTaskDelay(pdMS_TO_TICKS(ms));
 }
 
-static void op_motor(vm_t *vm) {
-    thingbot_t *bot = vm->ctx;
-    int speed = vm_pop(vm);
-    int id = vm_pop(vm);
-    if (!vm_check_act(vm, act_set_motor_speed(&bot->act, id, speed))) {
-        return;
-    }
-
-    ESP_LOGD(TAG, "motor %d speed %d, ip %d, sp %d", id, speed, vm->ip - 1, vm->sp);
+static void op_invoke(vm_t *vm) {
+    ESP_LOGE(TAG, "invoke not implemented, ip %d", vm->ip - 1);
+    vm->running = false;
 }
 
-static void op_servo(vm_t *vm) {
-    thingbot_t *bot = vm->ctx;
-    int angle = vm_pop(vm);
-    int id = vm_pop(vm);
-    if (!vm_check_act(vm, act_set_servo_angle(&bot->act, id, angle))) {
+static void op_invoke_native(vm_t *vm) {
+    int id = vm_fetch(vm);
+    if (id < 0 || id >= vm->native_count || vm->natives[id] == NULL) {
+        ESP_LOGE(TAG, "bad native id %d, ip %d", id, vm->ip - 2);
+        vm->running = false;
         return;
     }
 
-    ESP_LOGD(TAG, "servo %d angle %d, ip %d, sp %d", id, angle, vm->ip - 1, vm->sp);
-}
-
-static void op_spin(vm_t *vm) {
-    thingbot_t *bot = vm->ctx;
-    int speed = vm_pop(vm);
-    int id = vm_pop(vm);
-    if (!vm_check_act(vm, act_set_servo_speed(&bot->act, id, speed))) {
-        return;
-    }
-
-    ESP_LOGD(TAG, "spin %d speed %d, ip %d, sp %d", id, speed, vm->ip - 1, vm->sp);
-}
-
-static void op_buzz(vm_t *vm) {
-    thingbot_t *bot = vm->ctx;
-    int duty = vm_pop(vm);
-    if (!vm_check_act(vm, act_set_buzzer(&bot->act, duty))) {
-        return;
-    }
-
-    ESP_LOGD(TAG, "buzz duty %d, ip %d, sp %d", duty, vm->ip - 1, vm->sp);
-}
-
-static void op_led(vm_t *vm) {
-    thingbot_t *bot = vm->ctx;
-    int brightness = vm_pop(vm);
-    int id = vm_pop(vm);
-    if (!vm_check_act(vm, act_set_led(&bot->act, id, brightness))) {
-        return;
-    }
-
-    ESP_LOGD(TAG, "led %d brightness %d, ip %d, sp %d", id, brightness, vm->ip - 1, vm->sp);
+    ESP_LOGD(TAG, "invoke native %d, ip %d, sp %d", id, vm->ip - 2, vm->sp);
+    vm->natives[id](vm);
 }
 
 const OpHandler op_handlers[OP_COUNT] = {
@@ -262,9 +214,6 @@ const OpHandler op_handlers[OP_COUNT] = {
     [CALL] = op_call,
     [RET] = op_ret,
     [WAIT] = op_wait,
-    [MOTOR] = op_motor,
-    [SERVO] = op_servo,
-    [SPIN] = op_spin,
-    [BUZZ] = op_buzz,
-    [LED] = op_led,
+    [INVOKE] = op_invoke,
+    [INVOKE_NATIVE] = op_invoke_native,
 };
