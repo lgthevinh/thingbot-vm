@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vm.h"
+#include "engine.h"
 
 // INVOKE_NATIVE ids on ThingBot
 typedef enum {

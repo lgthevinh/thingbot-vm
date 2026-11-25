@@ -7,6 +7,8 @@ typedef enum {
     ADD,
     SUB,
     MUL,
+    DIV,
+    MOD,
     LOAD,
     STORE,
     JMP,

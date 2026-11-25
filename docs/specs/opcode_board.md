@@ -1,6 +1,6 @@
 # Board Native Specification
 
-ThingBot natives that drive the actuators on the PCA9685, called with [`INVOKE_NATIVE id`](opcode_common.md#invoke_native). They follow the conventions in [opcode_common.md](opcode_common.md). Native ids are defined by `NativeId` in `main/board/native.h`, implemented in `main/board/native.c`, and reach the hardware through the `act_*` functions in `main/board/act.c` via the board context (`thingbot_t *bot = vm->ctx`). `main` registers the table with `vm_init(&vm, &bot, thingbot_natives, NATIVE_COUNT)`.
+ThingBot natives that drive the actuators on the PCA9685, called with [`INVOKE_NATIVE id`](opcode_common.md#invoke_native). They follow the conventions in [opcode_common.md](opcode_common.md). Native ids are defined by `NativeId` in `main/board/native.h`, implemented in `main/board/native.c`, and reach the hardware through the `act_*` functions in `main/board/act.c` via the runtime (`rt->act`, see [vm.md](vm.md#runtime)). `main` registers the table with `vm_init(&vm, &runtime, thingbot_natives, NATIVE_COUNT)`.
 
 ## Table of Contents
 
@@ -105,6 +105,6 @@ Sets the brightness of an LED.
 Natives follow the halting behavior in [opcode_common.md](opcode_common.md#current-behavior). A native logs and halts when its `act_*` call fails. A native id outside the table is rejected by `INVOKE_NATIVE` before any native runs:
 
 | Condition       | Trigger                                                               |
-|-----------------|
+|-----------------|-----------------------------------------------------------------------|
 | Bad device id   | `id` outside the device range (`act_*` returns `ESP_ERR_INVALID_ARG`) |
 | Actuator failed | Any other non-`ESP_OK` return from `act_*` (e.g. I2C error)           |

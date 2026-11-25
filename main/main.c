@@ -1,12 +1,14 @@
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "native.h"
 #include "opcode.h"
-#include "thingbot.h"
+#include "runtime.h"
 #include "vm.h"
 
 #define I2C_SCL_GPIO GPIO_NUM_9
 #define I2C_SDA_GPIO GPIO_NUM_8
 
-static thingbot_t bot;
+static runtime_t runtime;
 static vm_t vm;
 
 void app_main(void) {
@@ -53,10 +55,15 @@ void app_main(void) {
     i2c_master_bus_handle_t i2c_bus = NULL;
     ESP_ERROR_CHECK(i2c_new_master_bus(&bus_config, &i2c_bus));
 
-    io_init(&bot.io);
-    io_set_i2c(&bot.io, i2c_bus);
-    ESP_ERROR_CHECK(act_init(&bot.act, bot.io.i2c_bus));
+    io_init(&runtime.io);
+    io_set_i2c(&runtime.io, i2c_bus);
+    ESP_ERROR_CHECK(act_init(&runtime.act, runtime.io.i2c_bus));
 
-    vm_init(&vm, &bot, thingbot_natives, NATIVE_COUNT);
-    vm_run(&vm, prog);
+    vm_init(&vm, &runtime, thingbot_natives, NATIVE_COUNT);
+    vm_load(&vm, prog);
+
+    // block the task on WAIT instead of spinning so the idle task and watchdog keep running
+    while (vm_run(&vm) == ENGINE_WAITING) {
+        vTaskDelay(pdMS_TO_TICKS(vm.engine.wait_ms));
+    }
 }

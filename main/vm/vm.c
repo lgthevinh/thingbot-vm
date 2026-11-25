@@ -1,36 +1,25 @@
 #include "vm.h"
-#include "esp_log.h"
-#include "handler.h"
 
-static const char *TAG = "vm";
-
-static void vm_exec(vm_t *vm, int opcode);
-
-void vm_init(vm_t *vm, void *ctx, const NativeFn *natives, int native_count) {
-    vm->ctx = ctx;
+void vm_init(vm_t *vm, runtime_t *runtime, const NativeFn *natives, int native_count) {
+    vm->runtime = runtime;
     vm->natives = natives;
     vm->native_count = native_count;
 }
 
-void vm_run(vm_t *vm, const int *prog) {
+void vm_load(vm_t *vm, const int *prog) {
     vm->prog = prog;
-    vm->pc = 0;  // program_counter
-    vm->sp = -1; // stack_pointer
-    vm->call_sp = -1;
-    vm->running = true;
-
-    while (vm->running) {
-        int op_code = vm_fetch(vm);
-        vm_exec(vm, op_code);
-    }
+    engine_reset(&vm->engine);
 }
 
-static void vm_exec(vm_t *vm, int opcode) {
-    if (opcode < 0 || opcode >= OP_COUNT || op_handlers[opcode] == NULL) {
-        ESP_LOGE(TAG, "bad opcode %d, pc %d", opcode, vm->pc - 1);
-        vm->running = false;
-        return;
+EngineStatus vm_run(vm_t *vm) {
+    // the caller has already paused for the last WAIT
+    if (vm->engine.status == ENGINE_WAITING) {
+        vm->engine.status = ENGINE_RUNNING;
     }
 
-    op_handlers[opcode](vm);
+    while (vm->engine.status == ENGINE_RUNNING) {
+        engine_step(&vm->engine, vm->prog, vm->natives, vm->native_count, vm->runtime);
+    }
+
+    return vm->engine.status;
 }

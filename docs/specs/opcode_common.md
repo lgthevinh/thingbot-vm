@@ -1,6 +1,6 @@
 # Thingcode Opcode Specification
 
-Thingcode is the bytecode run by the stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched in `main/vm/vm.c` to the handlers in `main/vm/handler.c`. Error codes are defined in `main/vm/error.h`. Board functions reached through `INVOKE_NATIVE` are specified in [opcode_board.md](opcode_board.md).
+Thingcode is the bytecode run by the stack-based VM. Opcodes are defined in `main/vm/opcode.h` and dispatched by `engine_step` in `main/vm/engine.c` to the handlers in `main/vm/handler.c`. Error codes are defined in `main/vm/error.h`. Board functions reached through `INVOKE_NATIVE` are specified in [opcode_board.md](opcode_board.md).
 
 ## Table of Contents
 
@@ -11,7 +11,7 @@ Thingcode is the bytecode run by the stack-based VM. Opcodes are defined in `mai
 - [Stack](#stack)
   - [PSH](#psh)
 - [Arithmetic](#arithmetic)
-  - [ADD](#add), [SUB](#sub), [MUL](#mul)
+  - [ADD](#add), [SUB](#sub), [MUL](#mul), [DIV](#div), [MOD](#mod)
 - [Comparison](#comparison)
   - [GT](#gt), [GTE](#gte), [LT](#lt), [LTE](#lte), [EQ](#eq), [NEQ](#neq)
 - [Locals](#locals)
@@ -44,21 +44,23 @@ Thingcode is the bytecode run by the stack-based VM. Opcodes are defined in `mai
 | 2     | `ADD`           | Arithmetic | -           | `( a b -- a+b )`    |
 | 3     | `SUB`           | Arithmetic | -           | `( a b -- a-b )`    |
 | 4     | `MUL`           | Arithmetic | -           | `( a b -- a*b )`    |
-| 5     | `LOAD`          | Locals     | `idx`       | `( -- local[idx] )` |
-| 6     | `STORE`         | Locals     | `idx`       | `( v -- )`          |
-| 7     | `JMP`           | Branching  | `target_pc` | `( -- )`            |
-| 8     | `JNZ`           | Branching  | `target_pc` | `( cond -- )`       |
-| 9     | `GT`            | Comparison | -           | `( a b -- a>b )`    |
-| 10    | `GTE`           | Comparison | -           | `( a b -- a>=b )`   |
-| 11    | `LT`            | Comparison | -           | `( a b -- a<b )`    |
-| 12    | `LTE`           | Comparison | -           | `( a b -- a<=b )`   |
-| 13    | `EQ`            | Comparison | -           | `( a b -- a==b )`   |
-| 14    | `NEQ`           | Comparison | -           | `( a b -- a!=b )`   |
-| 15    | `CALL`          | Calls      | `target_pc` | `( -- )`            |
-| 16    | `RET`           | Calls      | -           | `( -- )`            |
-| 17    | `WAIT`          | Timing     | -           | `( ms -- )`         |
-| 18    | `INVOKE_STATIC` | Calls      | -           | -                   |
-| 19    | `INVOKE_NATIVE` | Calls      | `id`        | `( args -- )`       |
+| 5     | `DIV`           | Arithmetic | -           | `( a b -- a/b )`    |
+| 6     | `MOD`           | Arithmetic | -           | `( a b -- a%b )`    |
+| 7     | `LOAD`          | Locals     | `idx`       | `( -- local[idx] )` |
+| 8     | `STORE`         | Locals     | `idx`       | `( v -- )`          |
+| 9     | `JMP`           | Branching  | `target_pc` | `( -- )`            |
+| 10    | `JNZ`           | Branching  | `target_pc` | `( cond -- )`       |
+| 11    | `GT`            | Comparison | -           | `( a b -- a>b )`    |
+| 12    | `GTE`           | Comparison | -           | `( a b -- a>=b )`   |
+| 13    | `LT`            | Comparison | -           | `( a b -- a<b )`    |
+| 14    | `LTE`           | Comparison | -           | `( a b -- a<=b )`   |
+| 15    | `EQ`            | Comparison | -           | `( a b -- a==b )`   |
+| 16    | `NEQ`           | Comparison | -           | `( a b -- a!=b )`   |
+| 17    | `CALL`          | Calls      | `target_pc` | `( -- )`            |
+| 18    | `RET`           | Calls      | -           | `( -- )`            |
+| 19    | `WAIT`          | Timing     | -           | `( ms -- )`         |
+| 20    | `INVOKE_STATIC` | Calls      | -           | -                   |
+| 21    | `INVOKE_NATIVE` | Calls      | `id`        | `( args -- )`       |
 
 ## Control
 
@@ -80,7 +82,7 @@ Pushes an immediate value onto the stack.
 
 ## Arithmetic
 
-Pop `b`, then `a`, push the result. Integer arithmetic, no overflow handling.
+Pop `b`, then `a`, push the result. Integer arithmetic; `ADD`, `SUB` and `MUL` have no overflow handling.
 
 ### ADD
 
@@ -93,6 +95,20 @@ Pop `b`, then `a`, push the result. Integer arithmetic, no overflow handling.
 ### MUL
 
 - Stack effect: `( a b -- a*b )`
+
+### DIV
+
+- Stack effect: `( a b -- a/b )`
+- Truncates toward zero: `-7 / 2` is `-3`.
+- `INT_MIN / -1` wraps to `INT_MIN`.
+- Error: `b == 0` halts the VM.
+
+### MOD
+
+- Stack effect: `( a b -- a%b )`
+- Remainder of the truncating division, with the sign of `a`: `-7 % 2` is `-1`.
+- `INT_MIN % -1` is `0`.
+- Error: `b == 0` halts the VM.
 
 ## Comparison
 
@@ -204,8 +220,8 @@ Pauses the program.
 
 - Operand: none
 - Stack effect: `( ms -- )`
-- Blocks the VM task with `vTaskDelay`, so other tasks and the idle task keep running.
-- Resolution is one FreeRTOS tick (10 ms at `CONFIG_FREERTOS_HZ=100`); `ms` is rounded down to whole ticks.
+- Sets the engine to `ENGINE_WAITING` with `wait_ms = ms`, and `vm_run` returns. The engine does not sleep itself: the caller pauses, then calls `vm_run` again to continue after the `WAIT` (see [vm.md](vm.md#vm_run)).
+- On ThingBot, `main` pauses with `vTaskDelay`, so other tasks and the idle task keep running. Resolution is one FreeRTOS tick (10 ms at `CONFIG_FREERTOS_HZ=100`); `ms` is rounded down to whole ticks.
 - Negative `ms` is treated as `0`.
 
 ## Errors
@@ -224,12 +240,13 @@ Defined by the `Error` enum in `error.h`.
 
 ### Current behavior
 
-The VM does not return `Error` codes yet. On the conditions below it logs an error and halts (`running = false`):
+The VM does not return `Error` codes yet. On the conditions below it logs an error and halts (`status = ENGINE_HALTED`):
 
 | Condition            | Trigger                                                      |
-|----------------------|
+|----------------------|--------------------------------------------------------------|
 | Bad opcode           | Opcode value outside the enum, or with no handler            |
 | Bad local index      | `LOAD` / `STORE` with `idx` outside `0 .. VM_LOCAL_SLOT - 1` |
+| Division by zero     | `DIV` / `MOD` with `b == 0`                                  |
 | Call stack overflow  | `CALL` with `VM_CALL_DEPTH` calls already active             |
 | Call stack underflow | `RET` with no active call                                    |
 | Not implemented      | `INVOKE_STATIC`                                              |
